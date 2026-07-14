@@ -1,0 +1,23 @@
+{
+  "name": "gesture-violin-mvp",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "test": "node --import tsx --test \"src/tests/*.test.ts\"",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "0.10.35",
+    "three": "0.185.1"
+  },
+  "devDependencies": {
+    "@types/node": "26.1.1",
+    "@types/three": "0.185.1",
+    "tsx": "4.23.1",
+    "typescript": "7.0.2",
+    "vite": "8.1.4"
+  }
+}
