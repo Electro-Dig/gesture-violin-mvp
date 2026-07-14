@@ -1,7 +1,10 @@
+import { GestureViolinApp } from "./app";
+import "./styles.css";
+
 const app = document.querySelector<HTMLDivElement>("#app");
 
 if (!app) {
   throw new Error("Missing #app root");
 }
 
-app.textContent = "Gesture Violin is warming up.";
+new GestureViolinApp(app);

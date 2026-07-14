@@ -7,6 +7,7 @@ export class StringSynth {
   private filter: BiquadFilterNode | null = null;
   private noiseGain: GainNode | null = null;
   private vibratoGain: GainNode | null = null;
+  private masterGain: GainNode | null = null;
   private oscillators: OscillatorNode[] = [];
   private noiseSource: AudioBufferSourceNode | null = null;
 
@@ -24,6 +25,11 @@ export class StringSynth {
     this.context = context;
     this.buildGraph(context);
     await context.resume();
+  }
+
+  setMuted(muted: boolean): void {
+    if (!this.context || !this.masterGain) return;
+    this.masterGain.gain.setTargetAtTime(muted ? 0 : 0.72, this.context.currentTime, 0.025);
   }
 
   update(state: PerformanceState): void {
@@ -62,6 +68,7 @@ export class StringSynth {
     this.filter = null;
     this.noiseGain = null;
     this.vibratoGain = null;
+    this.masterGain = null;
     this.oscillators = [];
     this.noiseSource = null;
   }
@@ -134,6 +141,7 @@ export class StringSynth {
     this.filter = filter;
     this.noiseGain = noiseGain;
     this.vibratoGain = vibratoGain;
+    this.masterGain = master;
     this.noiseSource = noiseSource;
   }
 }
