@@ -1,18 +1,15 @@
 import type { PerformanceState } from "../music/performanceModel";
 import { FRIENDLY_SCALE } from "../music/scale";
 
-export type InputMode = "camera" | "rehearsal" | "demo";
+export type InputMode = "rehearsal" | "demo";
 export type StatusTone = "neutral" | "active" | "warning";
 
 export class AppView {
   readonly sceneCanvas: HTMLCanvasElement;
-  readonly video: HTMLVideoElement;
-  readonly landmarkCanvas: HTMLCanvasElement;
   readonly performanceSurface: HTMLElement;
   readonly chooseSongButton: HTMLButtonElement;
   readonly startFreeButton: HTMLButtonElement;
   readonly muteButton: HTMLButtonElement;
-  readonly retryButton: HTMLButtonElement;
   readonly modeButtons: HTMLButtonElement[];
 
   private readonly intro: HTMLElement;
@@ -23,9 +20,6 @@ export class AppView {
   private readonly noteName: HTMLElement;
   private readonly frequency: HTMLElement;
   private readonly speedFill: HTMLElement;
-  private readonly confidence: HTMLElement;
-  private readonly cameraPanel: HTMLElement;
-  private readonly errorBanner: HTMLElement;
   private readonly demoBadge: HTMLElement;
   private readonly noteSteps: HTMLElement[];
 
@@ -33,13 +27,10 @@ export class AppView {
     root.innerHTML = template(demoEnabled);
 
     this.sceneCanvas = requireElement(root, "#violin-scene", HTMLCanvasElement);
-    this.video = requireElement(root, "#camera-video", HTMLVideoElement);
-    this.landmarkCanvas = requireElement(root, "#landmark-canvas", HTMLCanvasElement);
     this.performanceSurface = requireElement(root, "#performance-surface", HTMLElement);
     this.chooseSongButton = requireElement(root, "#choose-song", HTMLButtonElement);
     this.startFreeButton = requireElement(root, "#start-free", HTMLButtonElement);
     this.muteButton = requireElement(root, "#audio-toggle", HTMLButtonElement);
-    this.retryButton = requireElement(root, "#retry-camera", HTMLButtonElement);
     this.modeButtons = Array.from(root.querySelectorAll<HTMLButtonElement>("[data-input-mode]"));
     this.intro = requireElement(root, "#intro", HTMLElement);
     this.status = requireElement(root, "#tracking-status", HTMLElement);
@@ -49,9 +40,6 @@ export class AppView {
     this.noteName = requireElement(root, "#note-name", HTMLElement);
     this.frequency = requireElement(root, "#frequency", HTMLElement);
     this.speedFill = requireElement(root, "#speed-fill", HTMLElement);
-    this.confidence = requireElement(root, "#confidence", HTMLElement);
-    this.cameraPanel = requireElement(root, "#camera-panel", HTMLElement);
-    this.errorBanner = requireElement(root, "#error-banner", HTMLElement);
     this.demoBadge = requireElement(root, "#demo-badge", HTMLElement);
     this.noteSteps = Array.from(root.querySelectorAll<HTMLElement>("[data-midi]"));
   }
@@ -76,18 +64,12 @@ export class AppView {
       button.dataset.active = String(selected);
       button.setAttribute("aria-pressed", String(selected));
     });
-    this.setCameraVisible(mode === "camera");
     this.demoBadge.hidden = mode !== "demo";
   }
 
   setStatus(message: string, tone: StatusTone = "neutral"): void {
     this.status.dataset.tone = tone;
     this.statusText.textContent = message;
-  }
-
-  setError(message: string | null): void {
-    this.errorBanner.hidden = !message;
-    this.errorBanner.querySelector("span")!.textContent = message ?? "";
   }
 
   setAudioState(started: boolean, muted: boolean): void {
@@ -100,7 +82,6 @@ export class AppView {
     this.noteName.textContent = state.noteName;
     this.frequency.textContent = `${Math.round(state.frequencyHz)} Hz`;
     this.speedFill.style.setProperty("--level", `${Math.round(state.intensity * 100)}%`);
-    this.confidence.textContent = `${Math.round(state.confidence * 100)}%`;
 
     if (state.phase === "bowing") {
       this.phaseTitle.textContent = "正在拉弓";
@@ -118,9 +99,6 @@ export class AppView {
     });
   }
 
-  setCameraVisible(visible: boolean): void {
-    this.cameraPanel.hidden = !visible;
-  }
 }
 
 function template(demoEnabled: boolean): string {
@@ -138,7 +116,7 @@ function template(demoEnabled: boolean): string {
     <main class="experience-shell">
       <div class="grain" aria-hidden="true"></div>
       <header class="masthead">
-        <a class="wordmark" href="/" aria-label="弓弦首页">
+        <a class="wordmark" href="./" aria-label="弓弦首页">
           <span class="wordmark-mark" aria-hidden="true">⌁</span>
           <span><b>弓弦</b><small>GESTURE VIOLIN · STUDY 01</small></span>
         </a>
@@ -148,10 +126,10 @@ function template(demoEnabled: boolean): string {
         <button id="audio-toggle" class="text-control" type="button" aria-pressed="false">启用声音</button>
       </header>
 
-      <section id="performance-surface" class="performance-surface" data-mode="${demoEnabled ? "demo" : "camera"}">
+      <section id="performance-surface" class="performance-surface" data-mode="${demoEnabled ? "demo" : "rehearsal"}">
         <canvas id="violin-scene" aria-label="响应手势的原创三维小提琴"></canvas>
         <div class="stage-vignette" aria-hidden="true"></div>
-        <div id="demo-badge" class="demo-badge" ${demoEnabled ? "" : "hidden"}>AUTO DEMO · 非摄像头输入</div>
+        <div id="demo-badge" class="demo-badge" ${demoEnabled ? "" : "hidden"}>AUTO DEMO · 非触屏输入</div>
 
         <div class="movement-copy" aria-hidden="true">
           <span>01 / VERTICAL</span><b>上下</b><em>选择音高</em>
@@ -176,23 +154,9 @@ function template(demoEnabled: boolean): string {
           </div>
         </section>
 
-        <aside id="camera-panel" class="camera-panel" hidden>
-          <div class="camera-viewport">
-            <video id="camera-video" autoplay muted playsinline></video>
-            <canvas id="landmark-canvas"></canvas>
-            <span>LIVE / 本机处理</span>
-          </div>
-          <footer>追踪置信度 <b id="confidence">0%</b></footer>
-        </aside>
-
         <div class="mode-switch" role="group" aria-label="输入方式">
-          <button type="button" data-input-mode="camera" data-active="${String(!demoEnabled)}" aria-pressed="${String(!demoEnabled)}">摄像头</button>
-          <button type="button" data-input-mode="rehearsal" data-active="false" aria-pressed="false">鼠标排练</button>
+          <button type="button" data-input-mode="rehearsal" data-active="${String(!demoEnabled)}" aria-pressed="${String(!demoEnabled)}">触屏 / 鼠标</button>
           ${demoEnabled ? '<button type="button" data-input-mode="demo" data-active="true" aria-pressed="true">自动演示</button>' : ""}
-        </div>
-
-        <div id="error-banner" class="error-banner" hidden>
-          <span></span><button id="retry-camera" type="button">重试摄像头</button>
         </div>
 
         <section id="guided-hud" class="guided-hud" aria-label="曲目演奏提示" hidden>
@@ -201,7 +165,7 @@ function template(demoEnabled: boolean): string {
             <strong id="guided-song-title">欢乐颂</strong>
             <small id="guided-song-composer">Ludwig van Beethoven</small>
           </div>
-          <button id="hud-songs" class="hud-link" type="button">更换曲目</button>
+          <button id="hud-songs" class="hud-link" type="button">返回曲目</button>
           <div class="guided-notes" aria-live="polite">
             <span>CURRENT / 当前</span><strong id="guided-note">E4</strong>
             <small>NEXT&nbsp;&nbsp;<b id="guided-upcoming">E4 · F4 · G4</b></small>
@@ -233,37 +197,37 @@ function template(demoEnabled: boolean): string {
 
       <footer class="footer-line">
         <span>ONE HAND · ONE BOW · EIGHT NOTES</span>
-        <span>图像只在浏览器本地分析，不上传</span>
+        <span>离线运行 · 不联网 · 不上传</span>
       </footer>
 
       <section id="intro" class="intro" data-hidden="${String(demoEnabled)}" aria-labelledby="intro-title">
         <div class="intro-rule" aria-hidden="true"><span>INTERACTIVE INSTRUMENT / 001</span></div>
         <div class="intro-copy">
-          <p class="kicker">把一只手，变成一支琴弓</p>
+          <p class="kicker">把一次滑动，变成一支琴弓</p>
           <h1 id="intro-title">一手<br><i>成弓</i></h1>
-          <p class="intro-lead">手掌上下选择音高，左右移动才会发声。停下，琴声也随之收束。</p>
+          <p class="intro-lead">手指或鼠标上下选择音高，左右拖动才会发声。停下，琴声也随之收束。</p>
           <ol class="gesture-steps">
-            <li><b>01</b><span>举起单手<small>保持在镜头中央</small></span></li>
+            <li><b>01</b><span>按住舞台<small>触屏或鼠标均可</small></span></li>
             <li><b>02</b><span>上下定位<small>八个友好音符</small></span></li>
             <li><b>03</b><span>左右拉弓<small>速度决定力度</small></span></li>
           </ol>
           <div class="intro-actions">
-            <button id="choose-song" class="primary-action" type="button">选择曲目</button>
+            <button id="choose-song" class="primary-action" type="button">曲目演奏</button>
             <button id="start-free" class="secondary-action" type="button">自由演奏</button>
           </div>
-          <small class="privacy-note">需要摄像头权限与声音点击授权 · 推荐桌面版 Chrome / Edge</small>
+          <small class="privacy-note">小红书版完全离线 · 触屏与鼠标兼容 · 点击后启用声音</small>
         </div>
         <div class="intro-index" aria-hidden="true"><b>弦</b><span>G—V / 2026</span></div>
       </section>
 
       <section id="song-select" class="song-select" aria-labelledby="song-select-title" hidden>
         <div class="song-select-head">
-          <span>GUIDED PERFORMANCE / 选曲</span>
+          <span>GUIDED PERFORMANCE / 曲目</span>
           <button id="close-songs" type="button" aria-label="返回">返回</button>
         </div>
         <div class="song-select-copy">
           <p>不用寻找音高，只需跟随节奏换弓</p>
-          <h2 id="song-select-title">选择一首<br><i>开始演奏</i></h2>
+          <h2 id="song-select-title">跟随欢乐颂<br><i>开始演奏</i></h2>
           <small>旋律会自动保持准确；音符到达红线时，改变左右拉弓方向。</small>
         </div>
         <div class="song-list">
@@ -271,12 +235,8 @@ function template(demoEnabled: boolean): string {
             <span>01</span><strong>欢乐颂<small>Ludwig van Beethoven</small></strong>
             <em>约 40 秒 · 入门</em><i>开始 →</i>
           </button>
-          <button type="button" data-song-id="canon-in-d">
-            <span>02</span><strong>D 大调卡农<small>Johann Pachelbel</small></strong>
-            <em>约 70 秒 · 进阶</em><i>开始 →</i>
-          </button>
         </div>
-        <footer>两首曲目采用原创精简编配与浏览器实时合成，不使用录音采样。</footer>
+        <footer>《欢乐颂》采用原创精简编配与浏览器实时合成，不使用录音采样。</footer>
       </section>
 
       <section id="guided-result" class="guided-result" aria-labelledby="result-heading" hidden>
@@ -295,7 +255,7 @@ function template(demoEnabled: boolean): string {
           </dl>
           <div class="result-actions">
             <button id="replay-song" class="primary-action" type="button">再演奏一次</button>
-            <button id="result-songs" class="secondary-action" type="button">选择其他曲目</button>
+            <button id="result-songs" class="secondary-action" type="button">返回曲目</button>
             <button id="result-free" class="secondary-action" type="button">自由演奏</button>
           </div>
         </div>

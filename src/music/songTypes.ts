@@ -1,4 +1,4 @@
-export type SongId = "ode-to-joy" | "canon-in-d";
+export type SongId = "ode-to-joy";
 
 export type SongNote = {
   midi: number;

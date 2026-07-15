@@ -1,4 +1,6 @@
 .worktrees/
+.codex/
+artifacts/
 node_modules/
 dist/
 *.log

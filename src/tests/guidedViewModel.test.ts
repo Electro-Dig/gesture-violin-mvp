@@ -64,7 +64,7 @@ test("direction judgments become concise live feedback", () => {
 });
 
 test("count-in explains the simplified bow-only interaction", () => {
-  const song = getSong("canon-in-d");
+  const song = getSong("ode-to-joy");
   const engine = new GuidedSongEngine(song);
   const frame = engine.start(0);
   const display = buildGuidedDisplay(song, frame);

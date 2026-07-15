@@ -1,16 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { CANON_IN_D } from "../music/songs/canonInD";
 import { SONG_CATALOGUE } from "../music/songs/catalogue";
 import { ODE_TO_JOY } from "../music/songs/odeToJoy";
 import type { SongDefinition } from "../music/songTypes";
 import { validateSong } from "../music/songValidation";
 
-test("the catalogue contains two valid curated arrangements", () => {
+test("the Xiaohongshu catalogue contains only Ode to Joy", () => {
   assert.deepEqual(
     SONG_CATALOGUE.map((song) => song.id),
-    ["ode-to-joy", "canon-in-d"],
+    ["ode-to-joy"],
   );
   for (const song of SONG_CATALOGUE) {
     assert.deepEqual(validateSong(song), [], `${song.title} should be valid`);
@@ -21,12 +20,6 @@ test("Ode to Joy uses five broad beginner lanes", () => {
   assert.deepEqual(ODE_TO_JOY.pitchLanes, [60, 62, 64, 65, 67]);
   assert.deepEqual(uniqueMidi(ODE_TO_JOY), [60, 62, 64, 65, 67]);
   assert.ok(ODE_TO_JOY.totalBeats >= 44 && ODE_TO_JOY.totalBeats <= 52);
-});
-
-test("Canon stays inside seven D-major pitch lanes", () => {
-  assert.deepEqual(CANON_IN_D.pitchLanes, [62, 64, 66, 67, 69, 71, 73]);
-  assert.deepEqual(uniqueMidi(CANON_IN_D), [62, 64, 66, 67, 69, 71, 73]);
-  assert.ok(CANON_IN_D.totalBeats >= 76 && CANON_IN_D.totalBeats <= 84);
 });
 
 test("melody and accompaniment events are ordered inside every song", () => {
