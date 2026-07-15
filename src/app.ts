@@ -157,7 +157,7 @@ export class GestureViolinApp {
     this.view.performanceSurface.dataset.playMode = "guided";
     this.guidedView.start(song);
     this.guidedView.update(song, this.guidedFrame);
-    this.scene.setGuidance(this.guidedFrame.alignment);
+    this.scene.setGuidance(judgmentGuidance(this.guidedFrame));
     this.scene.update(this.lastPerformance);
     this.synth.update(this.lastPerformance);
   }
@@ -213,7 +213,9 @@ export class GestureViolinApp {
         this.view.setStatus("上下对准目标 · 左右移动开始拉弓", "neutral");
       } else {
         this.view.setStatus(
-          this.guidedFrame.speedFactor < 0.72 ? "正在演奏 · 靠近目标可加速" : "正在演奏 · 音高对准",
+          this.guidedFrame.lastJudgment === "miss"
+            ? "正在演奏 · 看红线准备换弓"
+            : "正在演奏 · 跟随方向节奏",
           "active",
         );
       }
@@ -330,7 +332,7 @@ export class GestureViolinApp {
     } else if (this.mode === "rehearsal") {
       this.updateFromHand(this.mouse.sample(nowMs), nowMs);
     } else {
-      this.updateFromHand(this.demo.sample(nowMs, this.guidedFrame?.targetPitch), nowMs);
+      this.updateFromHand(this.demo.sample(nowMs, this.playMode), nowMs);
     }
 
     if (nowMs - this.lastUiUpdateMs > 90) {
@@ -354,7 +356,7 @@ export class GestureViolinApp {
         this.guidedFrame.crossedAccompaniment,
         this.selectedSong.bpm,
       );
-      this.scene.setGuidance(this.guidedFrame.alignment);
+      this.scene.setGuidance(judgmentGuidance(this.guidedFrame));
       if (this.guidedFrame.phase === "complete" && !this.resultShown) {
         this.resultShown = true;
         this.guidedView.showResult(this.selectedSong, this.guidedFrame.score);
@@ -438,4 +440,11 @@ function cameraErrorMessage(error: unknown): string {
     if (error.name === "NotReadableError") return "摄像头正被其他应用占用。关闭占用后可重试。";
   }
   return error instanceof Error ? `${error.message}。可先使用鼠标排练。` : "摄像头启动失败。可先使用鼠标排练。";
+}
+
+function judgmentGuidance(frame: GuidedSongFrame): number | null {
+  if (frame.lastJudgment === "perfect") return 1;
+  if (frame.lastJudgment === "good") return 0.72;
+  if (frame.lastJudgment === "miss") return 0.18;
+  return null;
 }

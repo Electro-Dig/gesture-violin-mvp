@@ -22,12 +22,12 @@ test("demo input emits the same 21-landmark contract as camera input", () => {
   assert.equal(frame.confidence, 1);
 });
 
-test("guided demo input follows a requested pitch while keeping a bow stroke", () => {
+test("guided demo stays vertically central while reversing the bow", () => {
   const source = new DemoHandSource();
-  const lowTarget = source.sample(1000, 0.2);
-  const highTarget = source.sample(1250, 0.8);
+  const positions = Array.from({ length: 24 }, (_, index) => source.sample(index * 250, "guided"));
+  const xs = positions.map((frame) => frame.landmarks[0]!.x);
+  const ys = positions.map((frame) => frame.landmarks[0]!.y);
 
-  assert.ok(Math.abs((1 - lowTarget.landmarks[0]!.y) - 0.2) < 0.04);
-  assert.ok(Math.abs((1 - highTarget.landmarks[0]!.y) - 0.8) < 0.04);
-  assert.notEqual(lowTarget.landmarks[0]!.x, highTarget.landmarks[0]!.x);
+  assert.ok(Math.max(...xs) - Math.min(...xs) > 0.6);
+  assert.ok(Math.max(...ys) - Math.min(...ys) < 0.08);
 });

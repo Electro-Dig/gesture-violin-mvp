@@ -29,13 +29,16 @@ function guided(overrides: Partial<GuidedSongFrame> = {}): GuidedSongFrame {
     progress: 0.1,
     currentNote,
     currentNoteIndex: 0,
-    targetPitch: 0.75,
-    handPitch: 0,
-    alignment: 0.4,
-    speedFactor: 0.5,
+    expectedDirection: -1,
+    bowDirection: -1,
+    bowX: 0.3,
+    bowEngaged: true,
+    lastJudgment: "perfect",
+    lastJudgmentNoteIndex: 0,
+    judgedNoteCount: 1,
     upcomingNotes: [],
     crossedAccompaniment: [],
-    score: { total: 80, stars: 2, pitch: 70, continuity: 90, expression: 80 },
+    score: { total: 80, stars: 2, timing: 70, continuity: 90, expression: 80 },
     ...overrides,
   };
 }
@@ -53,17 +56,25 @@ test("count-in and completion stay silent", () => {
   assert.equal(mapGuidedPerformance(bow(), guided({ phase: "complete" })).voiceActive, false);
 });
 
-test("guided visuals follow target pitch while expression follows the real bow", () => {
+test("guided visuals stay centered while expression follows the real bow", () => {
   const state = mapGuidedPerformance(
     bow({ intensity: 0.82, direction: -1, x: 0.2 }),
-    guided({ targetPitch: 0.75, alignment: 1 }),
+    guided(),
   );
 
-  assert.equal(state.pitch, 0.75);
+  assert.equal(state.pitch, 0.5);
   assert.equal(state.intensity, 0.82);
   assert.equal(state.direction, -1);
   assert.equal(state.bowX, 0.2);
   assert.equal(state.voiceActive, true);
+});
+
+test("vertical hand travel has no visual or brightness penalty in guided songs", () => {
+  const low = mapGuidedPerformance(bow({ pitch: 0 }), guided());
+  const high = mapGuidedPerformance(bow({ pitch: 1 }), guided());
+
+  assert.equal(low.pitch, high.pitch);
+  assert.equal(low.brightness, high.brightness);
 });
 
 test("lost tracking releases a guided melody immediately", () => {
