@@ -6,6 +6,7 @@ import { mapBowPose } from "./sceneLayout";
 const IVORY = new THREE.Color("#f3e8d2");
 const AMBER = new THREE.Color("#f19a38");
 const VERMILION = new THREE.Color("#ff4d2e");
+const ALIGNED = new THREE.Color("#9fd18f");
 
 export class ViolinScene {
   private readonly renderer: THREE.WebGLRenderer;
@@ -18,6 +19,7 @@ export class ViolinScene {
   private readonly particles: THREE.Points<THREE.BufferGeometry, THREE.PointsMaterial>;
   private readonly resizeObserver: ResizeObserver;
   private performance: PerformanceState | null = null;
+  private guidance: number | null = null;
   private running = false;
 
   constructor(private readonly canvas: HTMLCanvasElement) {
@@ -61,6 +63,10 @@ export class ViolinScene {
 
   update(performance: PerformanceState): void {
     this.performance = performance;
+  }
+
+  setGuidance(alignment: number | null): void {
+    this.guidance = alignment === null ? null : THREE.MathUtils.clamp(alignment, 0, 1);
   }
 
   start(): void {
@@ -113,8 +119,11 @@ export class ViolinScene {
 
     this.stringMaterials.forEach((material, index) => {
       const selected = index === pose.stringIndex;
+      const guidedColor = this.guidance === null
+        ? VERMILION
+        : VERMILION.clone().lerp(ALIGNED, this.guidance);
       material.color.lerp(selected ? AMBER : IVORY, 0.16);
-      material.emissive.lerp(selected ? VERMILION : new THREE.Color("#000000"), 0.16);
+      material.emissive.lerp(selected ? guidedColor : new THREE.Color("#000000"), 0.16);
       material.emissiveIntensity = THREE.MathUtils.damp(
         material.emissiveIntensity,
         selected ? pose.glow : 0,
@@ -124,6 +133,10 @@ export class ViolinScene {
     });
 
     const particleMaterial = this.particles.material;
+    particleMaterial.color.lerp(
+      this.guidance === null ? AMBER : VERMILION.clone().lerp(ALIGNED, this.guidance),
+      0.12,
+    );
     particleMaterial.opacity = THREE.MathUtils.damp(
       particleMaterial.opacity,
       input.phase === "bowing" ? 0.2 + input.intensity * 0.65 : 0,

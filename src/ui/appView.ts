@@ -9,8 +9,8 @@ export class AppView {
   readonly video: HTMLVideoElement;
   readonly landmarkCanvas: HTMLCanvasElement;
   readonly performanceSurface: HTMLElement;
-  readonly startCameraButton: HTMLButtonElement;
-  readonly startDemoButton: HTMLButtonElement;
+  readonly chooseSongButton: HTMLButtonElement;
+  readonly startFreeButton: HTMLButtonElement;
   readonly muteButton: HTMLButtonElement;
   readonly retryButton: HTMLButtonElement;
   readonly modeButtons: HTMLButtonElement[];
@@ -36,8 +36,8 @@ export class AppView {
     this.video = requireElement(root, "#camera-video", HTMLVideoElement);
     this.landmarkCanvas = requireElement(root, "#landmark-canvas", HTMLCanvasElement);
     this.performanceSurface = requireElement(root, "#performance-surface", HTMLElement);
-    this.startCameraButton = requireElement(root, "#start-camera", HTMLButtonElement);
-    this.startDemoButton = requireElement(root, "#start-demo", HTMLButtonElement);
+    this.chooseSongButton = requireElement(root, "#choose-song", HTMLButtonElement);
+    this.startFreeButton = requireElement(root, "#start-free", HTMLButtonElement);
     this.muteButton = requireElement(root, "#audio-toggle", HTMLButtonElement);
     this.retryButton = requireElement(root, "#retry-camera", HTMLButtonElement);
     this.modeButtons = Array.from(root.querySelectorAll<HTMLButtonElement>("[data-input-mode]"));
@@ -60,9 +60,13 @@ export class AppView {
     this.intro.dataset.hidden = "true";
   }
 
+  showIntro(): void {
+    this.intro.dataset.hidden = "false";
+  }
+
   setBusy(busy: boolean): void {
-    this.startCameraButton.disabled = busy;
-    this.startCameraButton.textContent = busy ? "正在校准…" : "开启摄像头演奏";
+    this.startFreeButton.disabled = busy;
+    this.startFreeButton.textContent = busy ? "正在校准…" : "自由演奏";
   }
 
   setMode(mode: InputMode): void {
@@ -190,6 +194,37 @@ function template(demoEnabled: boolean): string {
         <div id="error-banner" class="error-banner" hidden>
           <span></span><button id="retry-camera" type="button">重试摄像头</button>
         </div>
+
+        <section id="guided-hud" class="guided-hud" aria-label="曲目演奏提示" hidden>
+          <div class="guided-piece">
+            <span>NOW PERFORMING</span>
+            <strong id="guided-song-title">欢乐颂</strong>
+            <small id="guided-song-composer">Ludwig van Beethoven</small>
+          </div>
+          <button id="hud-songs" class="hud-link" type="button">更换曲目</button>
+          <div class="guided-notes" aria-live="polite">
+            <span>CURRENT / 当前</span><strong id="guided-note">E4</strong>
+            <small>NEXT&nbsp;&nbsp;<b id="guided-upcoming">E4 · F4 · G4</b></small>
+          </div>
+          <div class="pitch-guide" aria-label="目标音高与当前手位">
+            <span class="pitch-guide-label">HIGH</span>
+            <i class="pitch-guide-line"></i>
+            <b id="pitch-target" class="pitch-target"><em>目标</em></b>
+            <b id="pitch-hand" class="pitch-hand"><em>手位</em></b>
+            <span class="pitch-guide-label">LOW</span>
+            <small>对准 <b id="pitch-alignment">100%</b></small>
+          </div>
+          <div id="guided-gate" class="guided-gate" data-tone="ready">音高对准 · 保持流畅拉弓</div>
+          <div class="guided-transport">
+            <span id="guided-progress-label">1 / 48 拍</span>
+            <i id="guided-progress" style="--progress: 0%"><b></b></i>
+          </div>
+          <div class="guided-live-score"><span>SCORE</span><strong id="guided-score">100</strong></div>
+        </section>
+
+        <div id="guided-count-in" class="guided-count-in" aria-live="assertive" hidden>
+          <span>准备</span><strong id="count-number">3</strong><small>上下对准目标 · 左右拉弓前进</small>
+        </div>
       </section>
 
       <footer class="footer-line">
@@ -209,12 +244,57 @@ function template(demoEnabled: boolean): string {
             <li><b>03</b><span>左右拉弓<small>速度决定力度</small></span></li>
           </ol>
           <div class="intro-actions">
-            <button id="start-camera" class="primary-action" type="button">开启摄像头演奏</button>
-            <button id="start-demo" class="secondary-action" type="button">先看自动演示</button>
+            <button id="choose-song" class="primary-action" type="button">选择曲目</button>
+            <button id="start-free" class="secondary-action" type="button">自由演奏</button>
           </div>
           <small class="privacy-note">需要摄像头权限与声音点击授权 · 推荐桌面版 Chrome / Edge</small>
         </div>
         <div class="intro-index" aria-hidden="true"><b>弦</b><span>G—V / 2026</span></div>
+      </section>
+
+      <section id="song-select" class="song-select" aria-labelledby="song-select-title" hidden>
+        <div class="song-select-head">
+          <span>GUIDED PERFORMANCE / 选曲</span>
+          <button id="close-songs" type="button" aria-label="返回">返回</button>
+        </div>
+        <div class="song-select-copy">
+          <p>用手位掌握音高，用左右拉弓推进音乐</p>
+          <h2 id="song-select-title">选择一首<br><i>开始演奏</i></h2>
+          <small>旋律始终悦耳；越接近目标音高，音乐前进越流畅。</small>
+        </div>
+        <div class="song-list">
+          <button type="button" data-song-id="ode-to-joy">
+            <span>01</span><strong>欢乐颂<small>Ludwig van Beethoven</small></strong>
+            <em>约 40 秒 · 入门</em><i>开始 →</i>
+          </button>
+          <button type="button" data-song-id="canon-in-d">
+            <span>02</span><strong>D 大调卡农<small>Johann Pachelbel</small></strong>
+            <em>约 70 秒 · 进阶</em><i>开始 →</i>
+          </button>
+        </div>
+        <footer>两首曲目采用原创精简编配与浏览器实时合成，不使用录音采样。</footer>
+      </section>
+
+      <section id="guided-result" class="guided-result" aria-labelledby="result-heading" hidden>
+        <div class="result-card">
+          <span>PERFORMANCE COMPLETE</span>
+          <h2 id="result-heading">演奏完成</h2>
+          <p id="result-title">欢乐颂</p>
+          <div class="result-score"><strong id="result-score">86</strong><small>/ 100</small></div>
+          <div class="result-stars" aria-label="星级">
+            <i data-result-star data-earned="true">★</i><i data-result-star data-earned="true">★</i><i data-result-star data-earned="false">★</i>
+          </div>
+          <dl>
+            <div><dt>音高控制</dt><dd id="result-pitch">88</dd></div>
+            <div><dt>拉弓连贯</dt><dd id="result-continuity">84</dd></div>
+            <div><dt>力度表现</dt><dd id="result-expression">82</dd></div>
+          </dl>
+          <div class="result-actions">
+            <button id="replay-song" class="primary-action" type="button">再演奏一次</button>
+            <button id="result-songs" class="secondary-action" type="button">选择其他曲目</button>
+            <button id="result-free" class="secondary-action" type="button">自由演奏</button>
+          </div>
+        </div>
       </section>
     </main>`;
 }
