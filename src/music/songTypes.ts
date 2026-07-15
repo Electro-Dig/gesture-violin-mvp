@@ -18,7 +18,7 @@ export type AccompanimentEvent = {
 export type ScoreBreakdown = {
   total: number;
   stars: 1 | 2 | 3;
-  pitch: number;
+  timing: number;
   continuity: number;
   expression: number;
 };

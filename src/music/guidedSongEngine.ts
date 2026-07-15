@@ -7,6 +7,7 @@ import type {
 } from "./songTypes";
 
 export type GuidedPhase = "idle" | "countIn" | "playing" | "complete";
+export type RhythmJudgment = "none" | "perfect" | "good" | "miss";
 
 export type GuidedSongFrame = {
   phase: GuidedPhase;
@@ -15,31 +16,39 @@ export type GuidedSongFrame = {
   progress: number;
   currentNote: SongNote;
   currentNoteIndex: number;
-  targetPitch: number;
-  handPitch: number;
-  alignment: number;
-  speedFactor: number;
+  expectedDirection: -1 | 1;
+  bowDirection: -1 | 0 | 1;
+  bowX: number;
+  bowEngaged: boolean;
+  lastJudgment: RhythmJudgment;
+  lastJudgmentNoteIndex: number;
+  judgedNoteCount: number;
   upcomingNotes: SongNote[];
   crossedAccompaniment: AccompanimentEvent[];
   score: ScoreBreakdown;
 };
 
 const COUNT_IN_MS = 3000;
-const REVERSAL_GRACE_SECONDS = 0.35;
+const TURNAROUND_GRACE_MS = 280;
+const PERFECT_WINDOW_BEATS = 0.12;
+const GOOD_WINDOW_BEATS = 0.32;
 const MAX_DELTA_SECONDS = 0.25;
 
 export class GuidedSongEngine {
   private phase: GuidedPhase = "idle";
   private countdownStartedMs = 0;
   private lastUpdateMs = 0;
+  private lastBowingMs = Number.NEGATIVE_INFINITY;
   private transportBeat = 0;
   private nextAccompanimentIndex = 0;
-  private idleVisibleSeconds = 0;
-  private bowingSeconds = 0;
-  private continuityPenaltySeconds = 0;
-  private pitchWeightedSeconds = 0;
-  private expressionWeightedSeconds = 0;
-  private expressiveSeconds = 0;
+  private nextJudgmentIndex = 0;
+  private lastJudgment: RhythmJudgment = "none";
+  private lastJudgmentNoteIndex = -1;
+  private timingScoreSum = 0;
+  private bowEngagedSeconds = 0;
+  private trackableIdleSeconds = 0;
+  private expressionScoreSum = 0;
+  private expressionSeconds = 0;
 
   constructor(readonly song: SongDefinition) {
     if (song.melody.length === 0) throw new Error("Guided songs require melody notes");
@@ -50,19 +59,19 @@ export class GuidedSongEngine {
     this.phase = "countIn";
     this.countdownStartedMs = nowMs;
     this.lastUpdateMs = nowMs;
-    return this.buildFrame(neutralGesture(nowMs), [], 3);
+    return this.buildFrame(neutralGesture(nowMs), [], 3, false);
   }
 
   reset(): GuidedSongFrame {
     this.clearAccumulators();
     this.phase = "idle";
-    return this.buildFrame(neutralGesture(0), [], 0);
+    return this.buildFrame(neutralGesture(0), [], 0, false);
   }
 
   update(bowing: BowingFrame, nowMs: number): GuidedSongFrame {
     if (this.phase === "idle" || this.phase === "complete") {
       this.lastUpdateMs = nowMs;
-      return this.buildFrame(bowing, [], 0);
+      return this.buildFrame(bowing, [], 0, false);
     }
 
     if (this.phase === "countIn") {
@@ -70,10 +79,10 @@ export class GuidedSongEngine {
       this.lastUpdateMs = nowMs;
       if (elapsedMs >= COUNT_IN_MS) {
         this.phase = "playing";
-        return this.buildFrame(bowing, [], 0);
+        return this.buildFrame(bowing, [], 0, false);
       }
       const countdown = Math.max(1, Math.ceil((COUNT_IN_MS - elapsedMs) / 1000));
-      return this.buildFrame(bowing, [], countdown);
+      return this.buildFrame(bowing, [], countdown, false);
     }
 
     const deltaSeconds = Math.min(
@@ -81,27 +90,29 @@ export class GuidedSongEngine {
       Math.max(0, (nowMs - this.lastUpdateMs) / 1000),
     );
     this.lastUpdateMs = nowMs;
+    if (bowing.active && bowing.bowing) this.lastBowingMs = nowMs;
+    const bowEngaged = bowing.active && (
+      bowing.bowing || nowMs - this.lastBowingMs <= TURNAROUND_GRACE_MS
+    );
     const crossedAccompaniment: AccompanimentEvent[] = [];
 
+    if (bowing.active) {
+      if (bowEngaged) this.bowEngagedSeconds += deltaSeconds;
+      else this.trackableIdleSeconds += deltaSeconds;
+    }
+
     if (bowing.active && bowing.bowing) {
-      const currentNote = noteAtBeat(this.song, this.transportBeat).note;
-      const targetPitch = noteTargetPitch(this.song, currentNote);
-      const spacing = laneSpacing(this.song);
-      const error = Math.abs(clamp01(bowing.pitch) - targetPitch);
-      const alignment = alignmentFromError(error, spacing);
-      const speedFactor = softGateFactor(error, spacing);
-      const expression = clamp01(1 - Math.abs(clamp01(bowing.intensity) - currentNote.dynamic));
+      const note = noteAtBeat(this.song, this.transportBeat).note;
+      const expression = clamp01(1 - Math.abs(clamp01(bowing.intensity) - note.dynamic));
+      this.expressionScoreSum += expression * deltaSeconds;
+      this.expressionSeconds += deltaSeconds;
+    }
 
-      this.bowingSeconds += deltaSeconds;
-      this.pitchWeightedSeconds += alignment * deltaSeconds;
-      this.expressionWeightedSeconds += expression * deltaSeconds;
-      this.expressiveSeconds += deltaSeconds;
-      this.idleVisibleSeconds = 0;
-
+    if (bowEngaged) {
       const beatsPerSecond = this.song.bpm / 60;
       const nextBeat = Math.min(
         this.song.totalBeats,
-        this.transportBeat + deltaSeconds * beatsPerSecond * speedFactor,
+        this.transportBeat + deltaSeconds * beatsPerSecond,
       );
       while (
         this.nextAccompanimentIndex < this.song.accompaniment.length &&
@@ -111,43 +122,72 @@ export class GuidedSongEngine {
         this.nextAccompanimentIndex += 1;
       }
       this.transportBeat = nextBeat;
-      if (this.transportBeat >= this.song.totalBeats) this.phase = "complete";
-    } else if (bowing.active) {
-      const previousIdle = this.idleVisibleSeconds;
-      this.idleVisibleSeconds += deltaSeconds;
-      const previousPenalty = Math.max(0, previousIdle - REVERSAL_GRACE_SECONDS);
-      const nextPenalty = Math.max(0, this.idleVisibleSeconds - REVERSAL_GRACE_SECONDS);
-      this.continuityPenaltySeconds += nextPenalty - previousPenalty;
-    } else {
-      this.idleVisibleSeconds = 0;
     }
 
-    return this.buildFrame(bowing, crossedAccompaniment, 0);
+    this.judgeNotes(bowing.bowing ? bowing.direction : 0);
+    if (this.transportBeat >= this.song.totalBeats) this.phase = "complete";
+
+    return this.buildFrame(bowing, crossedAccompaniment, 0, bowEngaged);
+  }
+
+  private judgeNotes(direction: BowingFrame["direction"]): void {
+    while (this.nextJudgmentIndex < this.song.melody.length) {
+      const noteIndex = this.nextJudgmentIndex;
+      const note = this.song.melody[noteIndex]!;
+      const timingError = this.transportBeat - note.startBeat;
+      const expectedDirection = directionForNote(noteIndex);
+
+      if (
+        direction === expectedDirection &&
+        Math.abs(timingError) <= GOOD_WINDOW_BEATS
+      ) {
+        const judgment: RhythmJudgment = Math.abs(timingError) <= PERFECT_WINDOW_BEATS
+          ? "perfect"
+          : "good";
+        this.recordJudgment(noteIndex, judgment, judgment === "perfect" ? 1 : 0.72);
+        continue;
+      }
+
+      if (timingError > GOOD_WINDOW_BEATS) {
+        this.recordJudgment(noteIndex, "miss", 0);
+        continue;
+      }
+      break;
+    }
+  }
+
+  private recordJudgment(
+    noteIndex: number,
+    judgment: RhythmJudgment,
+    timingScore: number,
+  ): void {
+    this.lastJudgment = judgment;
+    this.lastJudgmentNoteIndex = noteIndex;
+    this.timingScoreSum += timingScore;
+    this.nextJudgmentIndex += 1;
   }
 
   private buildFrame(
     bowing: BowingFrame,
     crossedAccompaniment: AccompanimentEvent[],
     countdown: number,
+    bowEngaged: boolean,
   ): GuidedSongFrame {
     const { note: currentNote, index: currentNoteIndex } = noteAtBeat(
       this.song,
       this.transportBeat,
     );
-    const targetPitch = noteTargetPitch(this.song, currentNote);
-    const handPitch = clamp01(bowing.pitch);
-    const spacing = laneSpacing(this.song);
-    const error = Math.abs(handPitch - targetPitch);
-    const alignment = alignmentFromError(error, spacing);
-    const speedFactor = softGateFactor(error, spacing);
-    const pitchAverage = this.bowingSeconds > 0
-      ? this.pitchWeightedSeconds / this.bowingSeconds
+    const timingAverage = this.nextJudgmentIndex > 0
+      ? this.timingScoreSum / this.nextJudgmentIndex
       : 1;
-    const continuityTotal = this.bowingSeconds + this.continuityPenaltySeconds;
-    const continuityAverage = continuityTotal > 0 ? this.bowingSeconds / continuityTotal : 1;
-    const expressionAverage = this.expressiveSeconds > 0
-      ? this.expressionWeightedSeconds / this.expressiveSeconds
+    const continuityTotal = this.bowEngagedSeconds + this.trackableIdleSeconds;
+    const continuityAverage = continuityTotal > 0
+      ? this.bowEngagedSeconds / continuityTotal
       : 1;
+    const expressionAverage = this.expressionSeconds > 0
+      ? this.expressionScoreSum / this.expressionSeconds
+      : 1;
+    const promptIndex = Math.min(this.nextJudgmentIndex, this.song.melody.length - 1);
 
     return {
       phase: this.phase,
@@ -158,50 +198,51 @@ export class GuidedSongEngine {
         : clamp01(this.transportBeat / this.song.totalBeats),
       currentNote,
       currentNoteIndex,
-      targetPitch,
-      handPitch,
-      alignment,
-      speedFactor,
+      expectedDirection: directionForNote(promptIndex),
+      bowDirection: bowing.direction,
+      bowX: clamp01(bowing.x),
+      bowEngaged,
+      lastJudgment: this.lastJudgment,
+      lastJudgmentNoteIndex: this.lastJudgmentNoteIndex,
+      judgedNoteCount: this.nextJudgmentIndex,
       upcomingNotes: this.song.melody.slice(currentNoteIndex + 1, currentNoteIndex + 4),
       crossedAccompaniment,
-      score: calculateScore(pitchAverage, continuityAverage, expressionAverage),
+      score: calculateScore(timingAverage, continuityAverage, expressionAverage),
     };
   }
 
   private clearAccumulators(): void {
     this.transportBeat = 0;
     this.nextAccompanimentIndex = 0;
-    this.idleVisibleSeconds = 0;
-    this.bowingSeconds = 0;
-    this.continuityPenaltySeconds = 0;
-    this.pitchWeightedSeconds = 0;
-    this.expressionWeightedSeconds = 0;
-    this.expressiveSeconds = 0;
+    this.nextJudgmentIndex = 0;
+    this.lastBowingMs = Number.NEGATIVE_INFINITY;
+    this.lastJudgment = "none";
+    this.lastJudgmentNoteIndex = -1;
+    this.timingScoreSum = 0;
+    this.bowEngagedSeconds = 0;
+    this.trackableIdleSeconds = 0;
+    this.expressionScoreSum = 0;
+    this.expressionSeconds = 0;
   }
 }
 
-export function softGateFactor(error: number, spacing: number): number {
-  const safeSpacing = Math.max(spacing, 0.0001);
-  const laneError = Math.abs(error) / safeSpacing;
-  if (laneError <= 0.45) return 1;
-  if (laneError >= 1.5 - 1e-9) return 0.3;
-  const amount = (laneError - 0.45) / (1.5 - 0.45);
-  return 1 - amount * 0.7;
+export function directionForNote(noteIndex: number): -1 | 1 {
+  return noteIndex % 2 === 0 ? 1 : -1;
 }
 
 export function calculateScore(
-  pitchAverage: number,
+  timingAverage: number,
   continuityAverage: number,
   expressionAverage: number,
 ): ScoreBreakdown {
-  const pitch = clamp01(pitchAverage);
+  const timing = clamp01(timingAverage);
   const continuity = clamp01(continuityAverage);
   const expression = clamp01(expressionAverage);
-  const total = Math.round(pitch * 45 + continuity * 35 + expression * 20);
+  const total = Math.round(timing * 45 + continuity * 35 + expression * 20);
   return {
     total,
     stars: total >= 82 ? 3 : total >= 60 ? 2 : 1,
-    pitch: Math.round(pitch * 100),
+    timing: Math.round(timing * 100),
     continuity: Math.round(continuity * 100),
     expression: Math.round(expression * 100),
   };
@@ -217,19 +258,6 @@ function noteAtBeat(song: SongDefinition, beat: number): { note: SongNote; index
     }
   }
   return { note: song.melody[index]!, index };
-}
-
-function noteTargetPitch(song: SongDefinition, note: SongNote): number {
-  const index = Math.max(0, song.pitchLanes.indexOf(note.midi));
-  return song.pitchLanes.length <= 1 ? 0.5 : index / (song.pitchLanes.length - 1);
-}
-
-function laneSpacing(song: SongDefinition): number {
-  return song.pitchLanes.length <= 1 ? 1 : 1 / (song.pitchLanes.length - 1);
-}
-
-function alignmentFromError(error: number, spacing: number): number {
-  return clamp01(1 - Math.abs(error) / (Math.max(spacing, 0.0001) * 1.5));
 }
 
 function neutralGesture(timestampMs: number): BowingFrame {
