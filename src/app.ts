@@ -332,7 +332,24 @@ export class GestureViolinApp {
     } else if (this.mode === "rehearsal") {
       this.updateFromHand(this.mouse.sample(nowMs), nowMs);
     } else {
-      this.updateFromHand(this.demo.sample(nowMs, this.playMode), nowMs);
+      if (this.playMode === "guided" && this.guidedFrame && this.selectedSong) {
+        const currentIndex = this.guidedFrame.currentNoteIndex;
+        const currentNote = this.guidedFrame.currentNote;
+        const nextNote = this.selectedSong.melody[currentIndex + 1];
+        const strokeEndBeat = nextNote?.startBeat ?? currentNote.startBeat + currentNote.durationBeats;
+        const strokeBeats = Math.max(strokeEndBeat - currentNote.startBeat, 0.001);
+        this.updateFromHand(
+          this.demo.sample(nowMs, "guided", {
+            active: this.guidedFrame.phase === "playing",
+            direction: this.guidedFrame.expectedDirection,
+            durationMs: strokeBeats * (60_000 / this.selectedSong.bpm),
+            noteIndex: currentIndex,
+          }),
+          nowMs,
+        );
+      } else {
+        this.updateFromHand(this.demo.sample(nowMs, this.playMode), nowMs);
+      }
     }
 
     if (nowMs - this.lastUiUpdateMs > 90) {

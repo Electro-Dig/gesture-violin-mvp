@@ -206,15 +206,19 @@ function template(demoEnabled: boolean): string {
             <span>CURRENT / 当前</span><strong id="guided-note">E4</strong>
             <small>NEXT&nbsp;&nbsp;<b id="guided-upcoming">E4 · F4 · G4</b></small>
           </div>
-          <div class="pitch-guide" aria-label="目标音高与当前手位">
-            <span class="pitch-guide-label">HIGH</span>
-            <i class="pitch-guide-line"></i>
-            <b id="pitch-target" class="pitch-target"><em>目标</em></b>
-            <b id="pitch-hand" class="pitch-hand"><em>手位</em></b>
-            <span class="pitch-guide-label">LOW</span>
-            <small>对准 <b id="pitch-alignment">100%</b></small>
+          <div id="rhythm-strip" class="rhythm-strip" aria-label="换弓节奏轨">
+            <i class="rhythm-spine" aria-hidden="true"></i>
+            <div id="rhythm-cues" class="rhythm-cues"></div>
+            <div class="judgment-line"><span>在这里换弓</span></div>
+            <div id="bow-cursor" class="bow-cursor"><i></i></div>
           </div>
-          <div id="guided-gate" class="guided-gate" data-tone="ready">音高对准 · 保持流畅拉弓</div>
+          <div class="direction-prompt">
+            <span>NEXT BOW / 下一弓</span>
+            <strong id="direction-symbol">→</strong>
+            <b id="direction-message">向右换弓</b>
+            <small id="rhythm-helper">音符到达红线时，改变拉弓方向</small>
+          </div>
+          <div id="timing-feedback" class="timing-feedback" data-tone="neutral">准备</div>
           <div class="guided-transport">
             <span id="guided-progress-label">1 / 48 拍</span>
             <i id="guided-progress" style="--progress: 0%"><b></b></i>
@@ -223,7 +227,7 @@ function template(demoEnabled: boolean): string {
         </section>
 
         <div id="guided-count-in" class="guided-count-in" aria-live="assertive" hidden>
-          <span>准备</span><strong id="count-number">3</strong><small>上下对准目标 · 左右拉弓前进</small>
+          <span>准备</span><strong id="count-number">3</strong><small>看准红线 · 音符抵达时改变拉弓方向</small>
         </div>
       </section>
 
@@ -258,9 +262,9 @@ function template(demoEnabled: boolean): string {
           <button id="close-songs" type="button" aria-label="返回">返回</button>
         </div>
         <div class="song-select-copy">
-          <p>用手位掌握音高，用左右拉弓推进音乐</p>
+          <p>不用寻找音高，只需跟随节奏换弓</p>
           <h2 id="song-select-title">选择一首<br><i>开始演奏</i></h2>
-          <small>旋律始终悦耳；越接近目标音高，音乐前进越流畅。</small>
+          <small>旋律会自动保持准确；音符到达红线时，改变左右拉弓方向。</small>
         </div>
         <div class="song-list">
           <button type="button" data-song-id="ode-to-joy">
@@ -285,7 +289,7 @@ function template(demoEnabled: boolean): string {
             <i data-result-star data-earned="true">★</i><i data-result-star data-earned="true">★</i><i data-result-star data-earned="false">★</i>
           </div>
           <dl>
-            <div><dt>音高控制</dt><dd id="result-pitch">88</dd></div>
+            <div><dt>方向节奏</dt><dd id="result-timing">88</dd></div>
             <div><dt>拉弓连贯</dt><dd id="result-continuity">84</dd></div>
             <div><dt>力度表现</dt><dd id="result-expression">82</dd></div>
           </dl>

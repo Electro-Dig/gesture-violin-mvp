@@ -31,3 +31,42 @@ test("guided demo stays vertically central while reversing the bow", () => {
   assert.ok(Math.max(...xs) - Math.min(...xs) > 0.6);
   assert.ok(Math.max(...ys) - Math.min(...ys) < 0.08);
 });
+
+test("guided score motion starts from rest and completes before the note boundary", () => {
+  const source = new DemoHandSource();
+  const ready = source.sample(2980, "guided", {
+    active: false,
+    direction: 1,
+    durationMs: 600,
+    noteIndex: 0,
+  }).landmarks[0]!.x;
+  const moving = source.sample(3100, "guided", {
+    active: true,
+    direction: 1,
+    durationMs: 600,
+    noteIndex: 0,
+  }).landmarks[0]!.x;
+  const boundary = source.sample(3460, "guided", {
+    active: true,
+    direction: 1,
+    durationMs: 600,
+    noteIndex: 0,
+  }).landmarks[0]!.x;
+  const reversed = source.sample(3470, "guided", {
+    active: true,
+    direction: -1,
+    durationMs: 600,
+    noteIndex: 1,
+  }).landmarks[0]!.x;
+  const leftward = source.sample(3670, "guided", {
+    active: true,
+    direction: -1,
+    durationMs: 600,
+    noteIndex: 1,
+  }).landmarks[0]!.x;
+
+  assert.ok(moving > ready);
+  assert.ok(boundary > moving);
+  assert.ok(Math.abs(reversed - boundary) < 1e-9);
+  assert.ok(leftward < reversed);
+});

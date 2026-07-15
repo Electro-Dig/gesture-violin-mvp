@@ -1,6 +1,7 @@
 import type { GuidedSongFrame } from "../music/guidedSongEngine";
 import type { ScoreBreakdown, SongDefinition, SongId } from "../music/songTypes";
 import { buildGuidedDisplay } from "./guidedViewModel";
+import type { RhythmCue } from "./rhythmStripModel";
 
 export class GuidedView {
   readonly songButtons: HTMLButtonElement[];
@@ -22,14 +23,16 @@ export class GuidedView {
   private readonly progress: HTMLElement;
   private readonly progressLabel: HTMLElement;
   private readonly score: HTMLElement;
-  private readonly target: HTMLElement;
-  private readonly hand: HTMLElement;
-  private readonly alignment: HTMLElement;
-  private readonly gate: HTMLElement;
+  private readonly cues: HTMLElement;
+  private readonly bowCursor: HTMLElement;
+  private readonly directionSymbol: HTMLElement;
+  private readonly directionMessage: HTMLElement;
+  private readonly rhythmHelper: HTMLElement;
+  private readonly timingFeedback: HTMLElement;
   private readonly resultTitle: HTMLElement;
   private readonly resultScore: HTMLElement;
   private readonly resultStars: HTMLElement[];
-  private readonly resultPitch: HTMLElement;
+  private readonly resultTiming: HTMLElement;
   private readonly resultContinuity: HTMLElement;
   private readonly resultExpression: HTMLElement;
 
@@ -46,14 +49,16 @@ export class GuidedView {
     this.progress = requireElement(root, "#guided-progress", HTMLElement);
     this.progressLabel = requireElement(root, "#guided-progress-label", HTMLElement);
     this.score = requireElement(root, "#guided-score", HTMLElement);
-    this.target = requireElement(root, "#pitch-target", HTMLElement);
-    this.hand = requireElement(root, "#pitch-hand", HTMLElement);
-    this.alignment = requireElement(root, "#pitch-alignment", HTMLElement);
-    this.gate = requireElement(root, "#guided-gate", HTMLElement);
+    this.cues = requireElement(root, "#rhythm-cues", HTMLElement);
+    this.bowCursor = requireElement(root, "#bow-cursor", HTMLElement);
+    this.directionSymbol = requireElement(root, "#direction-symbol", HTMLElement);
+    this.directionMessage = requireElement(root, "#direction-message", HTMLElement);
+    this.rhythmHelper = requireElement(root, "#rhythm-helper", HTMLElement);
+    this.timingFeedback = requireElement(root, "#timing-feedback", HTMLElement);
     this.resultTitle = requireElement(root, "#result-title", HTMLElement);
     this.resultScore = requireElement(root, "#result-score", HTMLElement);
     this.resultStars = Array.from(root.querySelectorAll<HTMLElement>("[data-result-star]"));
-    this.resultPitch = requireElement(root, "#result-pitch", HTMLElement);
+    this.resultTiming = requireElement(root, "#result-timing", HTMLElement);
     this.resultContinuity = requireElement(root, "#result-continuity", HTMLElement);
     this.resultExpression = requireElement(root, "#result-expression", HTMLElement);
     this.replayButton = requireElement(root, "#replay-song", HTMLButtonElement);
@@ -101,11 +106,14 @@ export class GuidedView {
     this.progress.style.setProperty("--progress", `${display.progressPercent}%`);
     this.progressLabel.textContent = display.progressLabel;
     this.score.textContent = display.scoreLabel;
-    this.target.style.top = `${display.targetTop}%`;
-    this.hand.style.top = `${display.handTop}%`;
-    this.alignment.textContent = `${display.alignmentPercent}%`;
-    this.gate.dataset.tone = display.gateTone;
-    this.gate.textContent = display.gateMessage;
+    this.cues.replaceChildren(...display.cues.map(createCueElement));
+    this.bowCursor.style.left = `${display.cursorLeft}%`;
+    this.directionSymbol.textContent = display.directionSymbol;
+    this.directionMessage.textContent = display.directionMessage;
+    this.rhythmHelper.textContent = display.helperMessage;
+    this.timingFeedback.dataset.tone = display.timingTone;
+    this.timingFeedback.dataset.note = String(frame.lastJudgmentNoteIndex);
+    this.timingFeedback.textContent = display.timingLabel;
     this.countIn.hidden = frame.phase !== "countIn";
     this.countNumber.textContent = String(frame.countdown);
   }
@@ -116,7 +124,7 @@ export class GuidedView {
     this.result.hidden = false;
     this.resultTitle.textContent = song.title;
     this.resultScore.textContent = String(score.total);
-    this.resultPitch.textContent = String(score.pitch);
+    this.resultTiming.textContent = String(score.timing);
     this.resultContinuity.textContent = String(score.continuity);
     this.resultExpression.textContent = String(score.expression);
     this.resultStars.forEach((star, index) => {
@@ -130,6 +138,24 @@ export class GuidedView {
     this.result.hidden = true;
     this.countIn.hidden = true;
   }
+}
+
+function createCueElement(cue: RhythmCue): HTMLElement {
+  const element = document.createElement("div");
+  element.className = "rhythm-cue";
+  element.dataset.state = cue.state;
+  element.dataset.judged = String(cue.judged);
+  element.dataset.judgment = cue.judgment;
+  element.style.setProperty("--cue-top", `${cue.topPercent}%`);
+  element.style.setProperty("--cue-height", `${cue.heightPercent}%`);
+
+  const stem = document.createElement("i");
+  const note = document.createElement("span");
+  note.textContent = cue.noteName;
+  const direction = document.createElement("b");
+  direction.textContent = cue.expectedDirection > 0 ? "→" : "←";
+  element.append(stem, note, direction);
+  return element;
 }
 
 function requireElement<T extends Element>(
