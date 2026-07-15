@@ -98,3 +98,22 @@ test("leftward strokes report a negative direction", () => {
   assert.equal(frame.bowing, true);
   assert.equal(frame.direction, -1);
 });
+
+test("moderate horizontal motion starts bowing without vertical travel", () => {
+  const interpreter = new BowingGestureInterpreter({ smoothingTauSeconds: 0 });
+  interpreter.update(handAt(0.45, 0.5, 1000));
+  const frame = interpreter.update(handAt(0.47, 0.5, 1100));
+
+  assert.equal(frame.bowing, true);
+  assert.equal(frame.direction, 1);
+});
+
+test("a slow turnaround keeps the bow engaged", () => {
+  const interpreter = new BowingGestureInterpreter({ smoothingTauSeconds: 0 });
+  interpreter.update(handAt(0.4, 0.5, 1000));
+  interpreter.update(handAt(0.44, 0.5, 1100));
+  const frame = interpreter.update(handAt(0.445, 0.5, 1200));
+
+  assert.equal(frame.bowing, true);
+  assert.equal(frame.direction, 1);
+});

@@ -11,14 +11,15 @@ export type BowingGestureInterpreterOptions = {
 const DEFAULT_OPTIONS: BowingGestureInterpreterOptions = {
   minConfidence: 0.55,
   smoothingTauSeconds: 0.055,
-  bowStartSpeed: 0.24,
-  bowReleaseSpeed: 0.075,
-  fullIntensitySpeed: 1.4,
+  bowStartSpeed: 0.14,
+  bowReleaseSpeed: 0.045,
+  fullIntensitySpeed: 1.05,
 };
 
 export class BowingGestureInterpreter {
   private readonly options: BowingGestureInterpreterOptions;
   private lastFrame: BowingFrame | null = null;
+  private lastDirection: BowingFrame["direction"] = 0;
 
   constructor(options: Partial<BowingGestureInterpreterOptions> = {}) {
     this.options = { ...DEFAULT_OPTIONS, ...options };
@@ -51,13 +52,9 @@ export class BowingGestureInterpreter {
     const shouldBow = previous?.bowing
       ? horizontalSpeed >= this.options.bowReleaseSpeed
       : horizontalSpeed >= this.options.bowStartSpeed;
-    const direction: BowingFrame["direction"] = shouldBow
-      ? velocityX > 0
-        ? 1
-        : velocityX < 0
-          ? -1
-          : 0
-      : 0;
+    if (shouldBow && velocityX !== 0) this.lastDirection = velocityX > 0 ? 1 : -1;
+    if (!shouldBow) this.lastDirection = 0;
+    const direction: BowingFrame["direction"] = shouldBow ? this.lastDirection : 0;
     const intensity = shouldBow
       ? clamp01(
           (horizontalSpeed - this.options.bowReleaseSpeed) /
@@ -83,6 +80,7 @@ export class BowingGestureInterpreter {
 
   reset(timestampMs = performance.now()): BowingFrame {
     this.lastFrame = null;
+    this.lastDirection = 0;
     return neutralFrame(timestampMs, 0.5, 0.5, 0);
   }
 
@@ -94,6 +92,7 @@ export class BowingGestureInterpreter {
       confidence,
     );
     this.lastFrame = frame;
+    this.lastDirection = 0;
     return frame;
   }
 }
