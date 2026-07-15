@@ -17,3 +17,8 @@ export const FRIENDLY_SCALE: readonly ScaleNote[] = [60, 62, 64, 67, 69, 72, 74,
 export function midiToFrequency(midi: number): number {
   return 440 * 2 ** ((midi - 69) / 12);
 }
+
+export function midiToNoteName(midi: number): string {
+  const normalizedMidi = Math.round(midi);
+  return `${NOTE_NAMES[((normalizedMidi % 12) + 12) % 12]}${Math.floor(normalizedMidi / 12) - 1}`;
+}
