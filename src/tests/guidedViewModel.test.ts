@@ -1,16 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import type { BowingFrame } from "../gesture/types";
 import { GuidedSongEngine } from "../music/guidedSongEngine";
 import { getSong } from "../music/songs/catalogue";
 import { buildGuidedDisplay } from "../ui/guidedViewModel";
 
-test("guided display translates score state into stable HUD labels", () => {
-  const song = getSong("ode-to-joy");
-  const engine = new GuidedSongEngine(song);
-  engine.start(0);
-  const frame = engine.update({
-    timestampMs: 3100,
+function bow(overrides: Partial<BowingFrame> = {}): BowingFrame {
+  return {
+    timestampMs: 3000,
     active: true,
     bowing: true,
     x: 0.4,
@@ -19,34 +17,58 @@ test("guided display translates score state into stable HUD labels", () => {
     intensity: 0.65,
     direction: 1,
     confidence: 1,
-  }, 3100);
-  const display = buildGuidedDisplay(song, frame);
+    ...overrides,
+  };
+}
 
-  assert.equal(display.noteName, "E4");
-  assert.equal(display.progressLabel, "1 / 48 拍");
-  assert.equal(display.scoreLabel, "100");
-  assert.match(display.upcomingLabel, /^[A-G]#?\d/);
-  assert.ok(display.targetTop >= 0 && display.targetTop <= 100);
-  assert.ok(display.handTop >= 0 && display.handTop <= 100);
-});
-
-test("guided display makes the elastic slowdown understandable", () => {
-  const song = getSong("canon-in-d");
+test("the current note reaches a fixed judgment line", () => {
+  const song = getSong("ode-to-joy");
   const engine = new GuidedSongEngine(song);
   engine.start(0);
-  const frame = engine.update({
-    timestampMs: 3200,
-    active: true,
-    bowing: true,
-    x: 0.6,
-    pitch: 1,
-    horizontalSpeed: 0.9,
-    intensity: 0.5,
-    direction: -1,
-    confidence: 1,
-  }, 3200);
+  const frame = engine.update(bow({ bowing: false, direction: 0 }), 3000);
+  const display = buildGuidedDisplay(song, frame);
+  const current = display.cues.find((cue) => cue.noteIndex === 0);
+
+  assert.equal(current?.topPercent, 68);
+  assert.equal(current?.expectedDirection, 1);
+  assert.equal(display.directionMessage, "向右换弓");
+  assert.equal(display.cursorLeft, 40);
+});
+
+test("the rhythm strip looks ahead and removes vertical pitch chasing", () => {
+  const song = getSong("ode-to-joy");
+  const engine = new GuidedSongEngine(song);
+  engine.start(0);
+  const frame = engine.update(bow({ bowing: false, direction: 0 }), 3000);
   const display = buildGuidedDisplay(song, frame);
 
-  assert.equal(display.gateTone, "slow");
-  assert.equal(display.gateMessage, "靠近目标音高，旋律会前进得更快");
+  assert.ok(display.cues.length >= 3);
+  assert.ok(display.cues.every((cue) => cue.topPercent >= 0 && cue.topPercent <= 100));
+  assert.ok(display.cues[1]!.topPercent < display.cues[0]!.topPercent);
+  assert.equal("targetTop" in display, false);
+  assert.equal("handTop" in display, false);
+});
+
+test("direction judgments become concise live feedback", () => {
+  const song = getSong("ode-to-joy");
+  const engine = new GuidedSongEngine(song);
+  engine.start(0);
+  engine.update(bow({ bowing: false, direction: 0 }), 3000);
+  const frame = engine.update(bow({ direction: 1 }), 3050);
+  const display = buildGuidedDisplay(song, frame);
+
+  assert.equal(display.timingLabel, "精准");
+  assert.equal(display.timingTone, "perfect");
+  assert.equal(display.directionMessage, "向左换弓");
+  assert.equal(display.progressLabel, "1 / 48 拍");
+});
+
+test("count-in explains the simplified bow-only interaction", () => {
+  const song = getSong("canon-in-d");
+  const engine = new GuidedSongEngine(song);
+  const frame = engine.start(0);
+  const display = buildGuidedDisplay(song, frame);
+
+  assert.equal(display.timingLabel, "准备");
+  assert.equal(display.helperMessage, "音符到达红线时，改变拉弓方向");
 });
