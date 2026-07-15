@@ -1,7 +1,10 @@
 import type { PerformanceState } from "../music/performanceModel";
+import type { AccompanimentEvent } from "../music/songTypes";
+import { AccompanimentSynth } from "./accompanimentSynth";
 import { mapStringVoice } from "./stringVoiceModel";
 
 export class StringSynth {
+  private readonly accompaniment = new AccompanimentSynth();
   private context: AudioContext | null = null;
   private voiceGain: GainNode | null = null;
   private filter: BiquadFilterNode | null = null;
@@ -30,6 +33,10 @@ export class StringSynth {
   setMuted(muted: boolean): void {
     if (!this.context || !this.masterGain) return;
     this.masterGain.gain.setTargetAtTime(muted ? 0 : 0.72, this.context.currentTime, 0.025);
+  }
+
+  triggerAccompaniment(events: AccompanimentEvent[], bpm: number): void {
+    events.forEach((event) => this.accompaniment.trigger(event, bpm));
   }
 
   update(state: PerformanceState): void {
@@ -62,6 +69,7 @@ export class StringSynth {
     const now = context.currentTime;
     this.voiceGain?.gain.setTargetAtTime(0, now, 0.03);
     await new Promise((resolve) => window.setTimeout(resolve, 100));
+    this.accompaniment.dispose();
     await context.close();
     this.context = null;
     this.voiceGain = null;
@@ -99,6 +107,7 @@ export class StringSynth {
     delay.connect(feedback).connect(delay);
     delay.connect(wet).connect(master);
     master.connect(context.destination);
+    this.accompaniment.start(context, master);
 
     const oscillatorSettings: Array<{ type: OscillatorType; level: number; detune: number }> = [
       { type: "sawtooth", level: 0.5, detune: -5 },
