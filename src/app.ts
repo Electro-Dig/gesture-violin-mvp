@@ -3,7 +3,8 @@ import { BowingGestureInterpreter } from "./gesture/bowingGestureInterpreter";
 import { DemoHandSource } from "./gesture/demoHandSource";
 import { HandTracker } from "./gesture/handTracker";
 import { MouseRehearsalSource, normalizePointer } from "./gesture/mouseRehearsalSource";
-import type { BowingFrame, HandFrame } from "./gesture/types";
+import { PrimaryHandSelector } from "./gesture/primaryHandSelector";
+import type { BowingFrame, HandFrame, HandTrackingSnapshot } from "./gesture/types";
 import { mapGuidedPerformance } from "./music/guidedPerformance";
 import { GuidedSongEngine, type GuidedSongFrame } from "./music/guidedSongEngine";
 import { mapPerformance, type PerformanceState } from "./music/performanceModel";
@@ -13,20 +14,19 @@ import { ViolinScene } from "./scene/violinScene";
 import { AppView, type InputMode } from "./ui/appView";
 import { GuidedView } from "./ui/guidedView";
 
-const CAMERA_INTERVAL_MS = 1000 / 28;
-
 export class GestureViolinApp {
   private readonly view: AppView;
   private readonly guidedView: GuidedView;
   private readonly scene: ViolinScene;
   private readonly synth = new StringSynth();
   private readonly tracker = new HandTracker();
+  private readonly primaryHandSelector = new PrimaryHandSelector();
   private readonly mouse = new MouseRehearsalSource();
   private readonly demo = new DemoHandSource();
   private readonly interpreter = new BowingGestureInterpreter();
   private mode: InputMode;
   private lastPerformance: PerformanceState;
-  private lastCameraDetectMs = Number.NEGATIVE_INFINITY;
+  private pendingCameraSnapshot: HandTrackingSnapshot | null = null;
   private lastUiUpdateMs = Number.NEGATIVE_INFINITY;
   private frameRequest = 0;
   private modeRequest = 0;
@@ -241,10 +241,16 @@ export class GestureViolinApp {
     this.view.setError(null);
     this.view.setStatus("正在加载本地手势模型…", "neutral");
     await this.ensureAudio();
+    this.pendingCameraSnapshot = null;
+    this.primaryHandSelector.reset();
 
     try {
       if (!navigator.mediaDevices?.getUserMedia) throw new Error("当前浏览器不支持摄像头访问");
-      await this.tracker.start(this.view.video);
+      await this.tracker.start(this.view.video, (snapshot) => {
+        if (request === this.modeRequest) {
+          this.pendingCameraSnapshot = snapshot;
+        }
+      });
       if (request !== this.modeRequest) {
         this.tracker.stopCamera();
         return;
@@ -252,7 +258,6 @@ export class GestureViolinApp {
       this.mode = "camera";
       this.inputReady = true;
       this.interpreter.reset(performance.now());
-      this.lastCameraDetectMs = Number.NEGATIVE_INFINITY;
       this.view.setMode("camera");
       this.view.setStatus("寻找一只手掌…", "neutral");
     } catch (error) {
@@ -272,6 +277,8 @@ export class GestureViolinApp {
     ++this.modeRequest;
     await this.ensureAudio();
     this.tracker.stopCamera();
+    this.pendingCameraSnapshot = null;
+    this.primaryHandSelector.reset();
     this.mode = "rehearsal";
     this.inputReady = true;
     this.mouse.release();
@@ -286,6 +293,8 @@ export class GestureViolinApp {
     ++this.modeRequest;
     await this.ensureAudio();
     this.tracker.stopCamera();
+    this.pendingCameraSnapshot = null;
+    this.primaryHandSelector.reset();
     this.mode = "demo";
     this.inputReady = true;
     this.interpreter.reset(performance.now());
@@ -323,10 +332,11 @@ export class GestureViolinApp {
       return;
     }
     if (this.mode === "camera") {
-      if (nowMs - this.lastCameraDetectMs >= CAMERA_INTERVAL_MS) {
-        this.lastCameraDetectMs = nowMs;
-        const hand = this.tracker.detect(this.view.video, nowMs);
-        this.updateFromHand(hand, nowMs);
+      const snapshot = this.pendingCameraSnapshot;
+      this.pendingCameraSnapshot = null;
+      if (snapshot) {
+        const hand = this.primaryHandSelector.select(snapshot.hands);
+        this.updateFromHand(hand, snapshot.timestampMs);
         this.drawLandmarks(hand);
       }
     } else if (this.mode === "rehearsal") {

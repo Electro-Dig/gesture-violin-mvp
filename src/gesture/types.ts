@@ -21,3 +21,15 @@ export type BowingFrame = {
   direction: -1 | 0 | 1;
   confidence: number;
 };
+
+export type TrackingDiagnostics = {
+  delegate: "GPU" | "CPU";
+  inferenceMs: number;
+  trackingHz: number;
+};
+
+export type HandTrackingSnapshot = {
+  timestampMs: number;
+  hands: HandFrame[];
+  diagnostics: TrackingDiagnostics;
+};
