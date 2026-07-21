@@ -1,12 +1,9 @@
-import { sequenceToMelody, type AccompanimentEvent, type SongDefinition } from "../songTypes";
-
-const variations = [
-  [66, 64, 62, 73, 71, 69, 71, 73, 62, 73, 71, 69, 67, 66, 64, 62],
-  [69, 67, 66, 64, 62, 64, 66, 67, 69, 71, 73, 71, 69, 67, 66, 64],
-  [62, 64, 66, 69, 67, 66, 64, 62, 71, 73, 71, 69, 67, 69, 66, 64],
-  [66, 69, 71, 73, 71, 69, 67, 66, 64, 66, 67, 69, 66, 64, 62, 64],
-  [69, 71, 73, 71, 69, 67, 66, 64, 62, 64, 66, 67, 69, 66, 64, 62],
-];
+import { CANON_IN_D_MELODY } from "../generated/canonInDMelody";
+import {
+  pitchLanesFromMelody,
+  type AccompanimentEvent,
+  type SongDefinition,
+} from "../songTypes";
 
 const progression = [
   [50, 57, 62],
@@ -53,16 +50,7 @@ export const CANON_IN_D: SongDefinition = {
       "Retained the app's original tutorial accompaniment.",
     ],
   },
-  pitchLanes: [62, 64, 66, 67, 69, 71, 73],
-  melody: sequenceToMelody(
-    variations.flatMap((variation, phrase) =>
-      variation.map((midi, index) => ({
-        midi,
-        durationBeats: 1,
-        dynamic: 0.44 + phrase * 0.08 + (index % 4) * 0.025,
-        phrase,
-      })),
-    ),
-  ),
+  pitchLanes: pitchLanesFromMelody(CANON_IN_D_MELODY),
+  melody: CANON_IN_D_MELODY,
   accompaniment,
 };

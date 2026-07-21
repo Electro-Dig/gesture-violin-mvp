@@ -301,8 +301,13 @@ function template(demoEnabled: boolean): string {
             <span>02</span><strong>D 大调卡农<small>Johann Pachelbel</small></strong>
             <em>约 70 秒 · 进阶</em><i>开始 →</i>
           </button>
+          <details class="score-provenance">
+            <summary>曲谱来源与改编说明</summary>
+            <p><b>欢乐颂</b> · Mutopia Public Domain · 提取最高声部、量化到八分拍并降七个半音。<a href="https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=528" target="_blank" rel="noreferrer">来源页 ↗</a></p>
+            <p><b>D 大调卡农</b> · Mutopia CC BY 3.0 · 选取开头单声部、量化到八分拍并截取 80 拍。<a href="https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=1700" target="_blank" rel="noreferrer">来源页 ↗</a></p>
+          </details>
         </div>
-        <footer>两首曲目采用原创精简编配与浏览器实时合成，不使用录音采样。</footer>
+        <footer>两首曲目为基于开源 MIDI 的教程节选；伴奏由浏览器实时合成，不使用录音采样。</footer>
       </section>
 
       <section id="guided-result" class="guided-result" aria-labelledby="result-heading" hidden>

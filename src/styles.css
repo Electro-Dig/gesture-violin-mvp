@@ -795,6 +795,25 @@ button { color: inherit; }
 .song-list strong small { display: block; margin-top: 6px; color: #847369; font-family: Inter, sans-serif; font-size: 8px; font-weight: 400; }
 .song-list em { color: #96857a; font-size: 9px; font-style: normal; }
 .song-list > button > i { justify-self: end; color: var(--amber); font-size: 9px; font-style: normal; }
+
+.score-provenance {
+  margin-top: 13px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  color: #77675d;
+  font-size: 8px;
+  line-height: 1.55;
+}
+
+.score-provenance summary {
+  color: #aa9789;
+  cursor: pointer;
+  letter-spacing: 0.1em;
+}
+
+.score-provenance p { margin: 9px 0 0; }
+.score-provenance b { color: #c8b5a5; font-weight: 500; }
+.score-provenance a { margin-left: 7px; color: var(--amber); text-decoration: none; }
 .song-select > footer { grid-column: 1 / -1; align-self: center; color: #655850; font-size: 7px; letter-spacing: 0.08em; }
 
 .guided-result {

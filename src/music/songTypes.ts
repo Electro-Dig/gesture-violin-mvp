@@ -55,6 +55,13 @@ export type SongDefinition = {
   accompaniment: AccompanimentEvent[];
 };
 
+
+export function pitchLanesFromMelody(
+  melody: readonly SongNote[],
+): number[] {
+  return [...new Set(melody.map((note) => note.midi))]
+    .sort((a, b) => a - b);
+}
 export type SequentialNote = Omit<SongNote, "startBeat">;
 
 export function sequenceToMelody(sequence: SequentialNote[]): SongNote[] {

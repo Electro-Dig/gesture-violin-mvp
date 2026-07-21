@@ -46,15 +46,36 @@ test("validation requires traceable score provenance", () => {
   assert.ok(errors.some((error) => error.includes("transformations")));
 });
 
-test("Ode to Joy uses five broad beginner lanes", () => {
-  assert.deepEqual(ODE_TO_JOY.pitchLanes, [60, 62, 64, 65, 67]);
-  assert.deepEqual(uniqueMidi(ODE_TO_JOY), [60, 62, 64, 65, 67]);
+test("uses the imported Ode to Joy melody", () => {
+  assert.deepEqual(
+    ODE_TO_JOY.melody.slice(0, 7).map((note) => note.midi),
+    [64, 64, 65, 67, 67, 65, 64],
+  );
+  assert.equal(ODE_TO_JOY.source.license, "Public Domain");
+  assert.equal(ODE_TO_JOY.arrangement.melodyStrategy, "skyline");
+});
+
+test("uses the imported Canon melody", () => {
+  assert.deepEqual(
+    CANON_IN_D.melody.slice(0, 8).map((note) => note.midi),
+    [74, 73, 71, 69, 67, 66, 67, 71],
+  );
+  assert.equal(CANON_IN_D.source.license, "CC BY 3.0");
+  assert.equal(CANON_IN_D.arrangement.melodyStrategy, "monophonic-track");
+});
+
+test("Ode to Joy derives pitch lanes from the imported excerpt", () => {
+  assert.deepEqual(ODE_TO_JOY.pitchLanes, [55, 60, 62, 64, 65, 67]);
+  assert.deepEqual(ODE_TO_JOY.pitchLanes, uniqueMidi(ODE_TO_JOY));
   assert.ok(ODE_TO_JOY.totalBeats >= 44 && ODE_TO_JOY.totalBeats <= 52);
 });
 
-test("Canon stays inside seven D-major pitch lanes", () => {
-  assert.deepEqual(CANON_IN_D.pitchLanes, [62, 64, 66, 67, 69, 71, 73]);
-  assert.deepEqual(uniqueMidi(CANON_IN_D), [62, 64, 66, 67, 69, 71, 73]);
+test("Canon derives pitch lanes from the imported excerpt", () => {
+  assert.deepEqual(
+    CANON_IN_D.pitchLanes,
+    [55, 57, 59, 61, 62, 64, 66, 67, 69, 71, 73, 74, 76, 78],
+  );
+  assert.deepEqual(CANON_IN_D.pitchLanes, uniqueMidi(CANON_IN_D));
   assert.ok(CANON_IN_D.totalBeats >= 76 && CANON_IN_D.totalBeats <= 84);
 });
 
