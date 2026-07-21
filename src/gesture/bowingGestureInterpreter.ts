@@ -2,7 +2,9 @@ import type { BowingFrame, HandFrame, Vec2 } from "./types";
 
 export type BowingGestureInterpreterOptions = {
   minConfidence: number;
-  smoothingTauSeconds: number;
+  slowTauSeconds: number;
+  fastTauSeconds: number;
+  fastResponseSpeed: number;
   bowStartSpeed: number;
   bowReleaseSpeed: number;
   fullIntensitySpeed: number;
@@ -10,7 +12,9 @@ export type BowingGestureInterpreterOptions = {
 
 const DEFAULT_OPTIONS: BowingGestureInterpreterOptions = {
   minConfidence: 0.55,
-  smoothingTauSeconds: 0.055,
+  slowTauSeconds: 0.06,
+  fastTauSeconds: 0.012,
+  fastResponseSpeed: 0.7,
   bowStartSpeed: 0.14,
   bowReleaseSpeed: 0.045,
   fullIntensitySpeed: 1.05,
@@ -20,6 +24,7 @@ export class BowingGestureInterpreter {
   private readonly options: BowingGestureInterpreterOptions;
   private lastFrame: BowingFrame | null = null;
   private lastDirection: BowingFrame["direction"] = 0;
+  private lastRawX: number | null = null;
 
   constructor(options: Partial<BowingGestureInterpreterOptions> = {}) {
     this.options = { ...DEFAULT_OPTIONS, ...options };
@@ -35,17 +40,22 @@ export class BowingGestureInterpreter {
     }
 
     const rawCenter = palmCenter(hand.landmarks);
+    const rawX = clamp01(rawCenter.x);
     const timestampMs = hand.timestampMs;
     const previous = this.lastFrame;
     const dtSeconds = previous
       ? Math.max((timestampMs - previous.timestampMs) / 1000, 1 / 240)
       : 0;
+    const rawSpeed = this.lastRawX !== null && dtSeconds > 0
+      ? Math.abs(rawX - this.lastRawX) / dtSeconds
+      : 0;
+    const smoothingTauSeconds = adaptiveTau(rawSpeed, this.options);
     const x = previous
-      ? smoothExp(previous.x, clamp01(rawCenter.x), this.options.smoothingTauSeconds, dtSeconds)
-      : clamp01(rawCenter.x);
+      ? smoothExp(previous.x, rawX, smoothingTauSeconds, dtSeconds)
+      : rawX;
     const pitchRaw = clamp01(1 - rawCenter.y);
     const pitch = previous
-      ? smoothExp(previous.pitch, pitchRaw, this.options.smoothingTauSeconds, dtSeconds)
+      ? smoothExp(previous.pitch, pitchRaw, smoothingTauSeconds, dtSeconds)
       : pitchRaw;
     const velocityX = previous && dtSeconds > 0 ? (x - previous.x) / dtSeconds : 0;
     const horizontalSpeed = Math.abs(velocityX);
@@ -75,12 +85,14 @@ export class BowingGestureInterpreter {
     };
 
     this.lastFrame = frame;
+    this.lastRawX = rawX;
     return frame;
   }
 
   reset(timestampMs = performance.now()): BowingFrame {
     this.lastFrame = null;
     this.lastDirection = 0;
+    this.lastRawX = null;
     return neutralFrame(timestampMs, 0.5, 0.5, 0);
   }
 
@@ -93,6 +105,7 @@ export class BowingGestureInterpreter {
     );
     this.lastFrame = frame;
     this.lastDirection = 0;
+    this.lastRawX = null;
     return frame;
   }
 }
@@ -127,6 +140,18 @@ function neutralFrame(
     direction: 0,
     confidence: clamp01(confidence),
   };
+}
+
+function adaptiveTau(
+  rawSpeed: number,
+  options: BowingGestureInterpreterOptions,
+): number {
+  if (options.fastResponseSpeed <= 0) {
+    return options.fastTauSeconds;
+  }
+  const fastMix = clamp01(rawSpeed / options.fastResponseSpeed);
+  return options.slowTauSeconds
+    + (options.fastTauSeconds - options.slowTauSeconds) * fastMix;
 }
 
 function smoothExp(current: number, target: number, tau: number, dtSeconds: number): number {

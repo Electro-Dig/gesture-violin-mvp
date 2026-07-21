@@ -28,7 +28,7 @@ function handAt(
 }
 
 test("vertical palm position selects pitch while horizontal position tracks the bow", () => {
-  const interpreter = new BowingGestureInterpreter({ smoothingTauSeconds: 0 });
+  const interpreter = new BowingGestureInterpreter({ slowTauSeconds: 0, fastTauSeconds: 0 });
   const frame = interpreter.update(handAt(0.8, 0.2, 1000));
 
   assert.ok(frame.x > 0.75);
@@ -37,7 +37,7 @@ test("vertical palm position selects pitch while horizontal position tracks the 
 });
 
 test("fast horizontal motion starts bowing and maps speed to intensity", () => {
-  const interpreter = new BowingGestureInterpreter({ smoothingTauSeconds: 0 });
+  const interpreter = new BowingGestureInterpreter({ slowTauSeconds: 0, fastTauSeconds: 0 });
   interpreter.update(handAt(0.2, 0.5, 1000));
   const frame = interpreter.update(handAt(0.7, 0.5, 1100));
 
@@ -48,7 +48,7 @@ test("fast horizontal motion starts bowing and maps speed to intensity", () => {
 });
 
 test("vertical-only movement does not start a bow stroke", () => {
-  const interpreter = new BowingGestureInterpreter({ smoothingTauSeconds: 0 });
+  const interpreter = new BowingGestureInterpreter({ slowTauSeconds: 0, fastTauSeconds: 0 });
   interpreter.update(handAt(0.5, 0.8, 1000));
   const frame = interpreter.update(handAt(0.5, 0.2, 1100));
 
@@ -58,7 +58,7 @@ test("vertical-only movement does not start a bow stroke", () => {
 });
 
 test("bowing stops when movement stays below the release threshold", () => {
-  const interpreter = new BowingGestureInterpreter({ smoothingTauSeconds: 0 });
+  const interpreter = new BowingGestureInterpreter({ slowTauSeconds: 0, fastTauSeconds: 0 });
   interpreter.update(handAt(0.2, 0.5, 1000));
   interpreter.update(handAt(0.7, 0.5, 1100));
   const frame = interpreter.update(handAt(0.701, 0.5, 1300));
@@ -68,7 +68,7 @@ test("bowing stops when movement stays below the release threshold", () => {
 });
 
 test("missing or low-confidence hands release immediately", () => {
-  const interpreter = new BowingGestureInterpreter({ smoothingTauSeconds: 0 });
+  const interpreter = new BowingGestureInterpreter({ slowTauSeconds: 0, fastTauSeconds: 0 });
   interpreter.update(handAt(0.2, 0.5, 1000));
   interpreter.update(handAt(0.8, 0.5, 1100));
 
@@ -82,7 +82,11 @@ test("missing or low-confidence hands release immediately", () => {
 });
 
 test("camera coordinates are stabilized by exponential smoothing", () => {
-  const interpreter = new BowingGestureInterpreter({ smoothingTauSeconds: 0.06 });
+  const interpreter = new BowingGestureInterpreter({
+    slowTauSeconds: 0.06,
+    fastTauSeconds: 0.012,
+    fastResponseSpeed: 0.7,
+  });
   interpreter.update(handAt(0.5, 0.5, 1000));
   const frame = interpreter.update(handAt(1, 0.5, 1016));
 
@@ -91,7 +95,7 @@ test("camera coordinates are stabilized by exponential smoothing", () => {
 });
 
 test("leftward strokes report a negative direction", () => {
-  const interpreter = new BowingGestureInterpreter({ smoothingTauSeconds: 0 });
+  const interpreter = new BowingGestureInterpreter({ slowTauSeconds: 0, fastTauSeconds: 0 });
   interpreter.update(handAt(0.8, 0.5, 1000));
   const frame = interpreter.update(handAt(0.3, 0.5, 1100));
 
@@ -100,7 +104,7 @@ test("leftward strokes report a negative direction", () => {
 });
 
 test("moderate horizontal motion starts bowing without vertical travel", () => {
-  const interpreter = new BowingGestureInterpreter({ smoothingTauSeconds: 0 });
+  const interpreter = new BowingGestureInterpreter({ slowTauSeconds: 0, fastTauSeconds: 0 });
   interpreter.update(handAt(0.45, 0.5, 1000));
   const frame = interpreter.update(handAt(0.47, 0.5, 1100));
 
@@ -109,11 +113,36 @@ test("moderate horizontal motion starts bowing without vertical travel", () => {
 });
 
 test("a slow turnaround keeps the bow engaged", () => {
-  const interpreter = new BowingGestureInterpreter({ smoothingTauSeconds: 0 });
+  const interpreter = new BowingGestureInterpreter({ slowTauSeconds: 0, fastTauSeconds: 0 });
   interpreter.update(handAt(0.4, 0.5, 1000));
   interpreter.update(handAt(0.44, 0.5, 1100));
   const frame = interpreter.update(handAt(0.445, 0.5, 1200));
 
   assert.equal(frame.bowing, true);
   assert.equal(frame.direction, 1);
+});
+
+test("follows a fast direction reversal within two camera frames", () => {
+  const interpreter = new BowingGestureInterpreter();
+  interpreter.update(handAt(0.1, 0.5, 1000));
+  interpreter.update(handAt(0.8, 0.5, 1016));
+  interpreter.update(handAt(0.65, 0.5, 1032));
+  const frame = interpreter.update(handAt(0.5, 0.5, 1048));
+
+  assert.equal(frame.bowing, true);
+  assert.equal(frame.direction, -1);
+});
+
+test("suppresses stationary landmark jitter", () => {
+  const interpreter = new BowingGestureInterpreter();
+  const frames = [
+    interpreter.update(handAt(0.5, 0.5, 1000)),
+    interpreter.update(handAt(0.5004, 0.5, 1016)),
+    interpreter.update(handAt(0.4997, 0.5, 1032)),
+    interpreter.update(handAt(0.5003, 0.5, 1048)),
+  ];
+
+  assert.equal(frames.some((frame) => frame.bowing), false);
+  const xs = frames.map((frame) => frame.x);
+  assert.ok(Math.max(...xs) - Math.min(...xs) < 0.001);
 });
