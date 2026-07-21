@@ -4,3 +4,4 @@ dist/
 *.log
 .netlify/
 verification/
+.superpowers/
