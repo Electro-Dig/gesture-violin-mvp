@@ -4,7 +4,7 @@
 - 分支：`feature/gesture-violin-mvp`
 - 环境：Windows，Codex 内嵌 Chromium（版本未暴露），本地 Vite `http://127.0.0.1:5173/?demo=1`
 - 目标站点：Netlify `gesture-violin-lab-664` / `29931500-0653-4cc2-af3a-1370ebe20b13`
-- 部署状态：未部署；等待用户对当前本地版本单独批准
+- 部署状态：测试预览已部署；现有生产站点未覆盖
 
 ## 自动化验证
 
@@ -62,9 +62,17 @@ Vite 生产构建仍给出单个 JavaScript chunk 超过 500 kB 的提醒，不�
 - 浏览器切换验证：欢乐颂切换前可见 7 个 `[data-cue-id]` 节点；选择卡农后立即变为 4 个，并显示卡农首音 D5，没有遗留上一首的 SVG 提示。
 - 两首曲目的首音、总拍数、最终小节/乐句进度与来源 manifest 由自动化测试锁定；方向同时由箭头、文本和弧线样式表达。
 
+## 测试预览部署
+
+- 源提交：`b1f4747`
+- Netlify deploy ID：`6a5f9e14d08a1cd9cb84572b`
+- 测试地址：<https://b1f4747-test--gesture-violin-lab-664.netlify.app>
+- 冒烟结果：首页 `200`，构建产物 CSS / JavaScript 均为 `200`，页面标题正确，`Permissions-Policy` 为 `camera=(self), microphone=()`。
+- 本次为 draft deploy；没有覆盖 <https://gesture-violin-lab-664.netlify.app>。
+
 ## 未解决项与上线前复测
 
 1. 在可操作摄像头权限的桌面 Chrome / Edge 上记录真实 GPU/CPU delegate、稳定 `trackingHz`、平均推理耗时，并实际检查表演者位于左中区域时的遮挡。
 2. 用真实手势复测快速反向、静止抖动、摄像头切换到鼠标时的设备释放；当前这三项分别有逻辑测试或 DOM 降级验证，但没有真实视频证据。
 3. Vite 的大 chunk 提醒可在后续性能专项中通过动态导入 Three.js / MediaPipe 路径处理。
-4. 当前 feature 分支没有部署。获得明确批准后，按 README 中的站点 ID 部署并对 HTTPS 摄像头路径做一次生产冒烟测试。
+4. 当前仅部署测试预览。获得明确的生产发布批准后，按 README 中的站点 ID 发布，并对生产域名的 HTTPS 摄像头路径再做一次冒烟测试。
