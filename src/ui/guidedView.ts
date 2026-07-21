@@ -1,7 +1,8 @@
 import type { GuidedSongFrame } from "../music/guidedSongEngine";
 import type { ScoreBreakdown, SongDefinition, SongId } from "../music/songTypes";
 import { buildGuidedDisplay } from "./guidedViewModel";
-import type { RhythmCue } from "./rhythmStripModel";
+import type { MeasureOverview, OrbitCue } from "./orbitRhythmModel";
+import { orbitCueAttributes } from "./orbitRhythmView";
 
 export class GuidedView {
   readonly songButtons: HTMLButtonElement[];
@@ -23,8 +24,13 @@ export class GuidedView {
   private readonly progress: HTMLElement;
   private readonly progressLabel: HTMLElement;
   private readonly score: HTMLElement;
-  private readonly cues: HTMLElement;
-  private readonly bowCursor: HTMLElement;
+  private readonly orbitCues: SVGElement;
+  private readonly measureLabel: HTMLElement;
+  private readonly phraseLabel: HTMLElement;
+  private readonly measureTicks: HTMLElement;
+  private readonly cueNodes = new Map<string, OrbitCueNode>();
+  private lastMeasureKey = "";
+  private measureTickCount = 0;
   private readonly directionSymbol: HTMLElement;
   private readonly directionMessage: HTMLElement;
   private readonly rhythmHelper: HTMLElement;
@@ -49,8 +55,10 @@ export class GuidedView {
     this.progress = requireElement(root, "#guided-progress", HTMLElement);
     this.progressLabel = requireElement(root, "#guided-progress-label", HTMLElement);
     this.score = requireElement(root, "#guided-score", HTMLElement);
-    this.cues = requireElement(root, "#rhythm-cues", HTMLElement);
-    this.bowCursor = requireElement(root, "#bow-cursor", HTMLElement);
+    this.orbitCues = requireElement(root, "#orbit-cues", SVGElement);
+    this.measureLabel = requireElement(root, "#measure-label", HTMLElement);
+    this.phraseLabel = requireElement(root, "#phrase-label", HTMLElement);
+    this.measureTicks = requireElement(root, "#measure-ticks", HTMLElement);
     this.directionSymbol = requireElement(root, "#direction-symbol", HTMLElement);
     this.directionMessage = requireElement(root, "#direction-message", HTMLElement);
     this.rhythmHelper = requireElement(root, "#rhythm-helper", HTMLElement);
@@ -106,8 +114,8 @@ export class GuidedView {
     this.progress.style.setProperty("--progress", `${display.progressPercent}%`);
     this.progressLabel.textContent = display.progressLabel;
     this.score.textContent = display.scoreLabel;
-    this.cues.replaceChildren(...display.cues.map(createCueElement));
-    this.bowCursor.style.left = `${display.cursorLeft}%`;
+    this.updateOrbit(display.orbitCues);
+    this.updateMeasure(display.measureOverview);
     this.directionSymbol.textContent = display.directionSymbol;
     this.directionMessage.textContent = display.directionMessage;
     this.rhythmHelper.textContent = display.helperMessage;
@@ -116,6 +124,83 @@ export class GuidedView {
     this.timingFeedback.textContent = display.timingLabel;
     this.countIn.hidden = frame.phase !== "countIn";
     this.countNumber.textContent = String(frame.countdown);
+  }
+
+  private updateOrbit(cues: OrbitCue[]): void {
+    const activeIds = new Set(cues.map((cue) => cue.id));
+
+    cues.forEach((cue) => {
+      let node = this.cueNodes.get(cue.id);
+      if (!node) {
+        node = createOrbitCueNode(cue.id);
+        this.cueNodes.set(cue.id, node);
+        this.orbitCues.append(node.group);
+      }
+
+      const attributes = orbitCueAttributes(cue);
+      node.group.setAttribute("class", attributes.className);
+      node.group.setAttribute("opacity", String(attributes.opacity));
+      node.group.dataset.state = cue.state;
+      node.arc.setAttribute("pathLength", String(attributes.pathLength));
+      node.arc.setAttribute("stroke-dasharray", attributes.dasharray);
+      node.arc.setAttribute(
+        "transform",
+        `rotate(${attributes.rotationDeg} 50 50)`,
+      );
+      node.point.setAttribute("cx", String(attributes.labelX));
+      node.point.setAttribute("cy", String(attributes.labelY));
+      node.label.setAttribute("x", String(attributes.labelX));
+      node.label.setAttribute("y", String(attributes.labelY));
+      node.label.textContent = `${cue.noteName} ${attributes.directionSymbol}`;
+      node.label.dataset.visible = String(
+        cue.state === "current"
+        || (cue.state === "upcoming" && cue.beatDistance <= 3),
+      );
+
+      if (
+        cue.state === "current"
+        && this.orbitCues.lastElementChild !== node.group
+      ) {
+        this.orbitCues.append(node.group);
+      }
+    });
+
+    this.cueNodes.forEach((node, id) => {
+      if (!activeIds.has(id)) {
+        node.group.remove();
+        this.cueNodes.delete(id);
+      }
+    });
+  }
+
+  private updateMeasure(overview: MeasureOverview): void {
+    const measureKey = [
+      overview.currentMeasure,
+      overview.totalMeasures,
+      overview.currentPhrase,
+      overview.totalPhrases,
+    ].join("/");
+
+    if (measureKey !== this.lastMeasureKey) {
+      this.measureLabel.textContent =
+        `\u5c0f\u8282 ${padTwo(overview.currentMeasure)} / ${padTwo(overview.totalMeasures)}`;
+      this.phraseLabel.textContent =
+        `\u4e50\u53e5 ${padTwo(overview.currentPhrase)} / ${padTwo(overview.totalPhrases)}`;
+      this.lastMeasureKey = measureKey;
+    }
+
+    if (overview.totalMeasures !== this.measureTickCount) {
+      const ticks = Array.from(
+        { length: Math.max(overview.totalMeasures - 1, 0) },
+        (_, index) => {
+          const tick = document.createElement("i");
+          tick.style.left = `${((index + 1) / overview.totalMeasures) * 100}%`;
+          return tick;
+        },
+      );
+      this.measureTicks.replaceChildren(...ticks);
+      this.measureTickCount = overview.totalMeasures;
+    }
   }
 
   showResult(song: SongDefinition, score: ScoreBreakdown): void {
@@ -140,22 +225,40 @@ export class GuidedView {
   }
 }
 
-function createCueElement(cue: RhythmCue): HTMLElement {
-  const element = document.createElement("div");
-  element.className = "rhythm-cue";
-  element.dataset.state = cue.state;
-  element.dataset.judged = String(cue.judged);
-  element.dataset.judgment = cue.judgment;
-  element.style.setProperty("--cue-top", `${cue.topPercent}%`);
-  element.style.setProperty("--cue-height", `${cue.heightPercent}%`);
+type OrbitCueNode = {
+  group: SVGGElement;
+  arc: SVGCircleElement;
+  point: SVGCircleElement;
+  label: SVGTextElement;
+};
 
-  const stem = document.createElement("i");
-  const note = document.createElement("span");
-  note.textContent = cue.noteName;
-  const direction = document.createElement("b");
-  direction.textContent = cue.expectedDirection > 0 ? "→" : "←";
-  element.append(stem, note, direction);
-  return element;
+const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
+
+function createOrbitCueNode(id: string): OrbitCueNode {
+  const group = document.createElementNS(SVG_NAMESPACE, "g");
+  group.dataset.cueId = id;
+
+  const arc = document.createElementNS(SVG_NAMESPACE, "circle");
+  arc.setAttribute("class", "orbit-cue-arc");
+  arc.setAttribute("cx", "50");
+  arc.setAttribute("cy", "50");
+  arc.setAttribute("r", "42");
+  arc.setAttribute("fill", "none");
+
+  const point = document.createElementNS(SVG_NAMESPACE, "circle");
+  point.setAttribute("class", "orbit-cue-point");
+  point.setAttribute("r", "1.25");
+
+  const label = document.createElementNS(SVG_NAMESPACE, "text");
+  label.setAttribute("class", "orbit-cue-label");
+  label.setAttribute("text-anchor", "middle");
+
+  group.append(arc, point, label);
+  return { group, arc, point, label };
+}
+
+function padTwo(value: number): string {
+  return String(value).padStart(2, "0");
 }
 
 function requireElement<T extends Element>(

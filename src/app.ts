@@ -214,7 +214,7 @@ export class GestureViolinApp {
       } else {
         this.view.setStatus(
           this.guidedFrame.lastJudgment === "miss"
-            ? "正在演奏 · 看红线准备换弓"
+            ? "正在演奏 · 看左下标记换弓"
             : "正在演奏 · 跟随方向节奏",
           "active",
         );
@@ -335,6 +335,7 @@ export class GestureViolinApp {
       const snapshot = this.pendingCameraSnapshot;
       this.pendingCameraSnapshot = null;
       if (snapshot) {
+        this.view.updateTrackingDiagnostics(snapshot.diagnostics);
         const hand = this.primaryHandSelector.select(snapshot.hands);
         this.updateFromHand(hand, snapshot.timestampMs);
         this.drawLandmarks(hand);

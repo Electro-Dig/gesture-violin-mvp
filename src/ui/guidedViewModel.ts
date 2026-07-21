@@ -4,7 +4,12 @@ import type {
 } from "../music/guidedSongEngine";
 import { midiToNoteName } from "../music/scale";
 import type { SongDefinition } from "../music/songTypes";
-import { buildRhythmCues, type RhythmCue } from "./rhythmStripModel";
+import {
+  buildMeasureOverview,
+  buildOrbitCues,
+  type MeasureOverview,
+  type OrbitCue,
+} from "./orbitRhythmModel";
 
 export type TimingTone = "neutral" | "perfect" | "good" | "miss";
 
@@ -14,10 +19,10 @@ export type GuidedDisplay = {
   progressPercent: number;
   progressLabel: string;
   scoreLabel: string;
-  cues: RhythmCue[];
+  orbitCues: OrbitCue[];
+  measureOverview: MeasureOverview;
   directionMessage: string;
   directionSymbol: "←" | "→";
-  cursorLeft: number;
   timingLabel: string;
   timingTone: TimingTone;
   helperMessage: string;
@@ -36,15 +41,20 @@ export function buildGuidedDisplay(
     progressPercent: Math.round(clamp01(frame.progress) * 1000) / 10,
     progressLabel: `${Math.min(song.totalBeats, Math.floor(frame.transportBeat) + 1)} / ${song.totalBeats} 拍`,
     scoreLabel: String(frame.score.total).padStart(2, "0"),
-    cues: buildRhythmCues(song, frame),
+    orbitCues: buildOrbitCues(song, frame.transportBeat),
+    measureOverview: buildMeasureOverview({
+      currentBeat: frame.transportBeat,
+      totalBeats: song.totalBeats,
+      beatsPerBar: song.beatsPerBar,
+      phraseBeats: song.beatsPerBar * 4,
+    }),
     directionMessage: frame.expectedDirection > 0 ? "向右换弓" : "向左换弓",
     directionSymbol: frame.expectedDirection > 0 ? "→" : "←",
-    cursorLeft: Math.round(clamp01(frame.bowX) * 1000) / 10,
     timingLabel: timing.label,
     timingTone: timing.tone,
     helperMessage: frame.phase === "complete"
       ? "演奏完成"
-      : "音符到达红线时，改变拉弓方向",
+      : "音符抵达左下命中点时，改变拉弓方向",
   };
 }
 

@@ -1,4 +1,5 @@
 import type { PerformanceState } from "../music/performanceModel";
+import type { TrackingDiagnostics } from "../gesture/types";
 import { FRIENDLY_SCALE } from "../music/scale";
 
 export type InputMode = "camera" | "rehearsal" | "demo";
@@ -25,6 +26,7 @@ export class AppView {
   private readonly speedFill: HTMLElement;
   private readonly confidence: HTMLElement;
   private readonly errorBanner: HTMLElement;
+  private readonly trackingPerformance: HTMLElement;
   private readonly demoBadge: HTMLElement;
   private readonly noteSteps: HTMLElement[];
 
@@ -49,6 +51,7 @@ export class AppView {
     this.frequency = requireElement(root, "#frequency", HTMLElement);
     this.speedFill = requireElement(root, "#speed-fill", HTMLElement);
     this.confidence = requireElement(root, "#confidence", HTMLElement);
+    this.trackingPerformance = requireElement(root, "#tracking-performance", HTMLElement);
     this.errorBanner = requireElement(root, "#error-banner", HTMLElement);
     this.demoBadge = requireElement(root, "#demo-badge", HTMLElement);
     this.noteSteps = Array.from(root.querySelectorAll<HTMLElement>("[data-midi]"));
@@ -116,6 +119,14 @@ export class AppView {
     });
   }
 
+  updateTrackingDiagnostics(diagnostics: TrackingDiagnostics): void {
+    this.trackingPerformance.textContent = [
+      diagnostics.delegate,
+      `${Math.round(diagnostics.trackingHz)} HZ`,
+      `${Math.round(diagnostics.inferenceMs)} MS`,
+    ].join(" · ");
+  }
+
   setCameraVisible(visible: boolean): void {
     this.video.hidden = !visible;
     this.landmarkCanvas.hidden = !visible;
@@ -144,7 +155,7 @@ function template(demoEnabled: boolean): string {
         </a>
         <div id="tracking-status" class="tracking-status" data-tone="neutral" role="status">
           <i aria-hidden="true"></i><span id="tracking-status-text">等待开始</span>
-          <small class="tracking-confidence"><span>VISION</span><b id="confidence">0%</b></small>
+          <small class="tracking-confidence"><span id="tracking-performance">VISION</span><b id="confidence">0%</b></small>
         </div>
         <button id="audio-toggle" class="text-control" type="button" aria-pressed="false">启用声音</button>
       </header>
@@ -201,28 +212,48 @@ function template(demoEnabled: boolean): string {
             <span>CURRENT / 当前</span><strong id="guided-note">E4</strong>
             <small>NEXT&nbsp;&nbsp;<b id="guided-upcoming">E4 · F4 · G4</b></small>
           </div>
-          <div id="rhythm-strip" class="rhythm-strip" aria-label="换弓节奏轨">
-            <i class="rhythm-spine" aria-hidden="true"></i>
-            <div id="rhythm-cues" class="rhythm-cues"></div>
-            <div class="judgment-line"><span>在这里换弓</span></div>
-            <div id="bow-cursor" class="bow-cursor"><i></i></div>
+          <div class="orbit-stage" aria-label="环形换弓节奏轨">
+            <svg id="rhythm-orbit" class="rhythm-orbit" viewBox="0 0 100 100" role="img">
+              <defs>
+                <linearGradient id="orbit-current-gradient" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#ff5a35"></stop>
+                  <stop offset="1" stop-color="#ffba70"></stop>
+                </linearGradient>
+              </defs>
+              <circle class="orbit-rail orbit-rail-outer" cx="50" cy="50" r="42"></circle>
+              <circle class="orbit-rail orbit-rail-inner" cx="50" cy="50" r="36"></circle>
+              <g id="orbit-cues"></g>
+              <g class="orbit-hit-zone" aria-label="换弓命中区">
+                <path d="M 9 80 L 15.2 73.5 L 22 68"></path>
+                <circle cx="15.2" cy="73.5" r="2.4"></circle>
+                <text x="5.5" y="87">HIT / 换弓</text>
+              </g>
+            </svg>
+            <span class="orbit-caption">BOW RHYTHM · 音符抵达左下标记时换弓</span>
           </div>
           <div class="direction-prompt">
             <span>NEXT BOW / 下一弓</span>
             <strong id="direction-symbol">→</strong>
             <b id="direction-message">向右换弓</b>
-            <small id="rhythm-helper">音符到达红线时，改变拉弓方向</small>
+            <small id="rhythm-helper">音符抵达左下命中点时，改变拉弓方向</small>
           </div>
           <div id="timing-feedback" class="timing-feedback" data-tone="neutral">准备</div>
-          <div class="guided-transport">
+          <div id="measure-overview" class="measure-overview">
+            <div class="measure-copy">
+              <span id="measure-label">小节 01 / 12</span>
+              <small id="phrase-label">乐句 01 / 03</small>
+            </div>
+            <div class="measure-track">
+              <i id="guided-progress" style="--progress: 0%"><b></b></i>
+              <div id="measure-ticks" class="measure-ticks" aria-hidden="true"></div>
+            </div>
             <span id="guided-progress-label">1 / 48 拍</span>
-            <i id="guided-progress" style="--progress: 0%"><b></b></i>
           </div>
           <div class="guided-live-score"><span>SCORE</span><strong id="guided-score">100</strong></div>
         </section>
 
         <div id="guided-count-in" class="guided-count-in" aria-live="assertive" hidden>
-          <span>准备</span><strong id="count-number">3</strong><small>看准红线 · 音符抵达时改变拉弓方向</small>
+          <span>准备</span><strong id="count-number">3</strong><small>看准左下标记 · 音符抵达时改变拉弓方向</small>
         </div>
       </section>
 
@@ -259,7 +290,7 @@ function template(demoEnabled: boolean): string {
         <div class="song-select-copy">
           <p>不用寻找音高，只需跟随节奏换弓</p>
           <h2 id="song-select-title">选择一首<br><i>开始演奏</i></h2>
-          <small>旋律会自动保持准确；音符到达红线时，改变左右拉弓方向。</small>
+          <small>旋律会自动保持准确；音符抵达左下命中点时，改变左右拉弓方向。</small>
         </div>
         <div class="song-list">
           <button type="button" data-song-id="ode-to-joy">

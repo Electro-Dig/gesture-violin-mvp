@@ -27,24 +27,24 @@ test("the current note reaches a fixed judgment line", () => {
   engine.start(0);
   const frame = engine.update(bow({ bowing: false, direction: 0 }), 3000);
   const display = buildGuidedDisplay(song, frame);
-  const current = display.cues.find((cue) => cue.noteIndex === 0);
+  const current = display.orbitCues.find((cue) => cue.id === "ode-to-joy-0");
 
-  assert.equal(current?.topPercent, 68);
+  assert.equal(current?.angleDeg, 214);
   assert.equal(current?.expectedDirection, 1);
   assert.equal(display.directionMessage, "向右换弓");
-  assert.equal(display.cursorLeft, 40);
 });
 
-test("the rhythm strip looks ahead and removes vertical pitch chasing", () => {
+test("the rhythm orbit looks ahead and reports measure progress", () => {
   const song = getSong("ode-to-joy");
   const engine = new GuidedSongEngine(song);
   engine.start(0);
   const frame = engine.update(bow({ bowing: false, direction: 0 }), 3000);
   const display = buildGuidedDisplay(song, frame);
 
-  assert.ok(display.cues.length >= 3);
-  assert.ok(display.cues.every((cue) => cue.topPercent >= 0 && cue.topPercent <= 100));
-  assert.ok(display.cues[1]!.topPercent < display.cues[0]!.topPercent);
+  assert.ok(display.orbitCues.length >= 3);
+  assert.ok(display.orbitCues.every((cue) => cue.sweepDeg >= 7 && cue.sweepDeg <= 48));
+  assert.equal(display.measureOverview.currentMeasure, 1);
+  assert.equal(display.measureOverview.totalMeasures, 12);
   assert.equal("targetTop" in display, false);
   assert.equal("handTop" in display, false);
 });
@@ -70,5 +70,5 @@ test("count-in explains the simplified bow-only interaction", () => {
   const display = buildGuidedDisplay(song, frame);
 
   assert.equal(display.timingLabel, "准备");
-  assert.equal(display.helperMessage, "音符到达红线时，改变拉弓方向");
+  assert.equal(display.helperMessage, "音符抵达左下命中点时，改变拉弓方向");
 });
