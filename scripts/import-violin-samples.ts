@@ -4,6 +4,7 @@ import path from "node:path";
 
 import {
   buildSourceEntries,
+  curlDownloadArguments,
   ffmpegArguments,
   sha256File,
   type ViolinSourceEntry,
@@ -34,11 +35,15 @@ const manifestPath = path.join(sourceDirectory, "source-manifest.json");
 const lockPath = path.join(sourceDirectory, "source-lock.json");
 const generatedManifestPath = path.join(root, "src", "audio", "generated", "violinSampleManifest.ts");
 const updateLock = process.argv.includes("--update-lock");
+let preferCurl = false;
 
 async function main(): Promise<void> {
   const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as ViolinSourceManifest;
   const entries = buildSourceEntries(manifest);
-  const downloaded = await Promise.all(entries.map(downloadSource));
+  const downloaded = [];
+  for (const entry of entries) {
+    downloaded.push(await downloadSource(entry));
+  }
   const nextLock: SourceLock = {
     library: manifest.library,
     version: manifest.version,
@@ -109,9 +114,22 @@ async function downloadSource(entry: ViolinSourceEntry): Promise<{
   try {
     await stat(filePath);
   } catch {
-    const response = await fetch(entry.sourceUrl);
-    if (!response.ok) throw new Error(`Download failed for ${entry.id}: HTTP ${response.status}`);
-    await writeFile(filePath, new Uint8Array(await response.arrayBuffer()));
+    if (!preferCurl) {
+      try {
+        const response = await fetch(entry.sourceUrl, { signal: AbortSignal.timeout(15_000) });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        await writeFile(filePath, new Uint8Array(await response.arrayBuffer()));
+      } catch (error) {
+        preferCurl = true;
+        console.warn(`Node download failed for ${entry.id}; using curl fallback: ${String(error)}`);
+      }
+    }
+    if (preferCurl) {
+      await run(
+        process.platform === "win32" ? "curl.exe" : "curl",
+        curlDownloadArguments(entry.sourceUrl, filePath),
+      );
+    }
   }
   const fileStats = await stat(filePath);
   return { entry, sha256: await sha256File(filePath), bytes: fileStats.size };

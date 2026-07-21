@@ -59,6 +59,8 @@ export function ffmpegArguments(sourcePath: string, outputPath: string): string[
     "-y",
     "-i",
     sourcePath,
+    "-t",
+    "7.5",
     "-ac",
     "1",
     "-ar",
@@ -71,6 +73,22 @@ export function ffmpegArguments(sourcePath: string, outputPath: string): string[
     "128k",
     "-write_xing",
     "0",
+    outputPath,
+  ];
+}
+
+export function curlDownloadArguments(sourceUrl: string, outputPath: string): string[] {
+  return [
+    "-L",
+    "--fail",
+    "--silent",
+    "--show-error",
+    "--retry",
+    "3",
+    "--connect-timeout",
+    "20",
+    sourceUrl,
+    "-o",
     outputPath,
   ];
 }

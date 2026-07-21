@@ -47,6 +47,8 @@ test("uses one stable mono 44.1 kHz MP3 transform for every layer", () => {
     "-y",
     "-i",
     "source.wav",
+    "-t",
+    "7.5",
     "-ac",
     "1",
     "-ar",

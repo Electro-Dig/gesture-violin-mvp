@@ -1,5 +1,78 @@
 {
   "library": "VSCO 2 CE",
   "version": "1.1.0",
-  "files": []
+  "files": [
+    {
+      "id": "c4-p",
+      "sourceUrl": "https://raw.githubusercontent.com/sgossner/VSCO-2-CE/1.1.0/Strings/Solo%20Violin/Arco%20Vib/LLVln_ArcoVib_C4_p.wav",
+      "sha256": "592ebf4404ccafc7164c13cc543911ba9a2fe5f5e70dbb200807e2ae37b25035",
+      "bytes": 3096650
+    },
+    {
+      "id": "c4-f",
+      "sourceUrl": "https://raw.githubusercontent.com/sgossner/VSCO-2-CE/1.1.0/Strings/Solo%20Violin/Arco%20Vib/LLVln_ArcoVib_C4_f.wav",
+      "sha256": "4169605b51a72454f11bc2c34efc66c1d9993fd2b7d5f097a025ef9d3a2dbdfa",
+      "bytes": 2334170
+    },
+    {
+      "id": "e4-p",
+      "sourceUrl": "https://raw.githubusercontent.com/sgossner/VSCO-2-CE/1.1.0/Strings/Solo%20Violin/Arco%20Vib/LLVln_ArcoVib_E4_p.wav",
+      "sha256": "57c5aec0678a5d582d87ab33cd2f8954fea26ffd04c932eb6753d6a78e08736b",
+      "bytes": 2600174
+    },
+    {
+      "id": "e4-f",
+      "sourceUrl": "https://raw.githubusercontent.com/sgossner/VSCO-2-CE/1.1.0/Strings/Solo%20Violin/Arco%20Vib/LLVln_ArcoVib_E4_f.wav",
+      "sha256": "418512905f3294a23cf999f0587bf8e04d60192fe317ea8c80c150a85670eda2",
+      "bytes": 2416566
+    },
+    {
+      "id": "g4-p",
+      "sourceUrl": "https://raw.githubusercontent.com/sgossner/VSCO-2-CE/1.1.0/Strings/Solo%20Violin/Arco%20Vib/LLVln_ArcoVib_G4_p.wav",
+      "sha256": "ad1ba8442a6b40919093c9c831a8171c7030f7e651fbe075ab87764665deef88",
+      "bytes": 2594066
+    },
+    {
+      "id": "g4-f",
+      "sourceUrl": "https://raw.githubusercontent.com/sgossner/VSCO-2-CE/1.1.0/Strings/Solo%20Violin/Arco%20Vib/LLVln_ArcoVib_G4_f.wav",
+      "sha256": "14e3ea3d5172722d4d2686bae5da3d603800a7a474fa295d98275a9410913822",
+      "bytes": 2366050
+    },
+    {
+      "id": "a4-p",
+      "sourceUrl": "https://raw.githubusercontent.com/sgossner/VSCO-2-CE/1.1.0/Strings/Solo%20Violin/Arco%20Vib/LLVln_ArcoVib_A4_p.wav",
+      "sha256": "0d05607b46b78690893006d5aa7923ac304c7fb497df1e96536dc88ac5ac487f",
+      "bytes": 2612122
+    },
+    {
+      "id": "a4-f",
+      "sourceUrl": "https://raw.githubusercontent.com/sgossner/VSCO-2-CE/1.1.0/Strings/Solo%20Violin/Arco%20Vib/LLVln_ArcoVib_A4_f.wav",
+      "sha256": "19e5374658351508a9e2c929e871a43caff41e62d5e3363ead6f88428a9ab863",
+      "bytes": 2488526
+    },
+    {
+      "id": "c5-p",
+      "sourceUrl": "https://raw.githubusercontent.com/sgossner/VSCO-2-CE/1.1.0/Strings/Solo%20Violin/Arco%20Vib/LLVln_ArcoVib_C5_p.wav",
+      "sha256": "77a2133b5f97e1ec0edb759c0c552fc3efa7caf4ce1e0a4aa22625cf4c9da130",
+      "bytes": 2498790
+    },
+    {
+      "id": "c5-f",
+      "sourceUrl": "https://raw.githubusercontent.com/sgossner/VSCO-2-CE/1.1.0/Strings/Solo%20Violin/Arco%20Vib/LLVln_ArcoVib_C5_f.wav",
+      "sha256": "af72f852ef2892233699851dacf5f8d97d446822d8eb4ce9e0ec27d5a721b118",
+      "bytes": 2497990
+    },
+    {
+      "id": "e5-p",
+      "sourceUrl": "https://raw.githubusercontent.com/sgossner/VSCO-2-CE/1.1.0/Strings/Solo%20Violin/Arco%20Vib/LLVln_ArcoVib_E5_p.wav",
+      "sha256": "c60c3bcfc64ea00ebf8d97b16f2876c892393839a017a945c5e557359b6369a4",
+      "bytes": 2517094
+    },
+    {
+      "id": "e5-f",
+      "sourceUrl": "https://raw.githubusercontent.com/sgossner/VSCO-2-CE/1.1.0/Strings/Solo%20Violin/Arco%20Vib/LLVln_ArcoVib_E5_f.wav",
+      "sha256": "5c278e263fd59650190fc58294945cd291906eb1abd8293f728a96a878d1d478",
+      "bytes": 2365174
+    }
+  ]
 }
