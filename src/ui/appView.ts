@@ -24,7 +24,6 @@ export class AppView {
   private readonly frequency: HTMLElement;
   private readonly speedFill: HTMLElement;
   private readonly confidence: HTMLElement;
-  private readonly cameraPanel: HTMLElement;
   private readonly errorBanner: HTMLElement;
   private readonly demoBadge: HTMLElement;
   private readonly noteSteps: HTMLElement[];
@@ -50,7 +49,6 @@ export class AppView {
     this.frequency = requireElement(root, "#frequency", HTMLElement);
     this.speedFill = requireElement(root, "#speed-fill", HTMLElement);
     this.confidence = requireElement(root, "#confidence", HTMLElement);
-    this.cameraPanel = requireElement(root, "#camera-panel", HTMLElement);
     this.errorBanner = requireElement(root, "#error-banner", HTMLElement);
     this.demoBadge = requireElement(root, "#demo-badge", HTMLElement);
     this.noteSteps = Array.from(root.querySelectorAll<HTMLElement>("[data-midi]"));
@@ -119,7 +117,9 @@ export class AppView {
   }
 
   setCameraVisible(visible: boolean): void {
-    this.cameraPanel.hidden = !visible;
+    this.video.hidden = !visible;
+    this.landmarkCanvas.hidden = !visible;
+    this.performanceSurface.dataset.cameraActive = String(visible);
   }
 }
 
@@ -144,12 +144,16 @@ function template(demoEnabled: boolean): string {
         </a>
         <div id="tracking-status" class="tracking-status" data-tone="neutral" role="status">
           <i aria-hidden="true"></i><span id="tracking-status-text">等待开始</span>
+          <small class="tracking-confidence"><span>VISION</span><b id="confidence">0%</b></small>
         </div>
         <button id="audio-toggle" class="text-control" type="button" aria-pressed="false">启用声音</button>
       </header>
 
       <section id="performance-surface" class="performance-surface" data-mode="${demoEnabled ? "demo" : "camera"}">
+        <video id="camera-video" class="camera-stage" autoplay muted playsinline aria-hidden="true"></video>
+        <div class="camera-stage-light" aria-hidden="true"></div>
         <canvas id="violin-scene" aria-label="响应手势的原创三维小提琴"></canvas>
+        <canvas id="landmark-canvas" class="landmark-layer" aria-hidden="true"></canvas>
         <div class="stage-vignette" aria-hidden="true"></div>
         <div id="demo-badge" class="demo-badge" ${demoEnabled ? "" : "hidden"}>AUTO DEMO · 非摄像头输入</div>
 
@@ -175,15 +179,6 @@ function template(demoEnabled: boolean): string {
             <i><b id="speed-fill" style="--level: 0%"></b></i>
           </div>
         </section>
-
-        <aside id="camera-panel" class="camera-panel" hidden>
-          <div class="camera-viewport">
-            <video id="camera-video" autoplay muted playsinline></video>
-            <canvas id="landmark-canvas"></canvas>
-            <span>LIVE / 本机处理</span>
-          </div>
-          <footer>追踪置信度 <b id="confidence">0%</b></footer>
-        </aside>
 
         <div class="mode-switch" role="group" aria-label="输入方式">
           <button type="button" data-input-mode="camera" data-active="${String(!demoEnabled)}" aria-pressed="${String(!demoEnabled)}">摄像头</button>

@@ -2,6 +2,11 @@ import * as THREE from "three";
 
 import type { PerformanceState } from "../music/performanceModel";
 import { mapBowPose } from "./sceneLayout";
+import {
+  mapStageCamera,
+  mapStagePlacement,
+  type StagePlacement,
+} from "./stagePlacement";
 
 const IVORY = new THREE.Color("#f3e8d2");
 const AMBER = new THREE.Color("#f19a38");
@@ -12,6 +17,7 @@ export class ViolinScene {
   private readonly renderer: THREE.WebGLRenderer;
   private readonly scene = new THREE.Scene();
   private readonly camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
+  private readonly rig = new THREE.Group();
   private readonly instrument = new THREE.Group();
   private readonly bow = new THREE.Group();
   private readonly bowMaterials: THREE.MeshStandardMaterial[] = [];
@@ -21,6 +27,7 @@ export class ViolinScene {
   private performance: PerformanceState | null = null;
   private guidance: number | null = null;
   private running = false;
+  private stagePlacement: StagePlacement = mapStagePlacement(16 / 9);
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     this.renderer = new THREE.WebGLRenderer({
@@ -52,8 +59,8 @@ export class ViolinScene {
 
     this.instrument.rotation.set(-0.08, -0.12, -0.025);
     this.instrument.position.set(0.25, -0.35, 0);
-    this.instrument.scale.setScalar(0.92);
-    this.scene.add(this.instrument, this.bow, this.particles);
+    this.rig.add(this.instrument, this.bow, this.particles);
+    this.scene.add(this.rig);
 
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(canvas.parentElement ?? canvas);
@@ -67,6 +74,12 @@ export class ViolinScene {
 
   setGuidance(alignment: number | null): void {
     this.guidance = alignment === null ? null : THREE.MathUtils.clamp(alignment, 0, 1);
+  }
+
+  setStagePlacement(placement: StagePlacement): void {
+    this.stagePlacement = placement;
+    this.rig.position.set(placement.x, placement.y, 0);
+    this.rig.scale.setScalar(placement.scale);
   }
 
   start(): void {
@@ -146,7 +159,7 @@ export class ViolinScene {
     this.particles.position.set(this.bow.position.x * 0.14 + 0.22, this.bow.position.y, 0.75);
     this.particles.rotation.z = timeMs * 0.00035;
     const pulse = input.phase === "bowing" ? 1 + Math.sin(timeMs * 0.018) * 0.035 : 1;
-    this.instrument.scale.setScalar(0.92 * pulse);
+    this.instrument.scale.setScalar(pulse);
 
     this.renderer.render(this.scene, this.camera);
   };
@@ -308,7 +321,7 @@ export class ViolinScene {
       new THREE.MeshBasicMaterial({ color: "#7f2d1d", transparent: true, opacity: 0.34 }),
     );
     halo.position.set(0.2, 0.15, -0.6);
-    this.scene.add(halo);
+    this.rig.add(halo);
 
     const lineGeometry = new THREE.BufferGeometry().setFromPoints([
       new THREE.Vector3(-4.6, -2.7, -0.7),
@@ -328,7 +341,11 @@ export class ViolinScene {
     const height = Math.max(parent?.clientHeight ?? this.canvas.clientHeight, 1);
     this.renderer.setSize(width, height, false);
     this.camera.aspect = width / height;
+    const stageCamera = mapStageCamera(this.camera.aspect);
+    this.camera.position.set(stageCamera.x, 0.25, stageCamera.z);
+    this.camera.lookAt(stageCamera.x, 0.25, 0);
     this.camera.updateProjectionMatrix();
+    this.setStagePlacement(mapStagePlacement(this.camera.aspect));
   }
 }
 
