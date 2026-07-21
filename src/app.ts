@@ -1,4 +1,5 @@
 import { StringSynth } from "./audio/stringSynth";
+import { readToneMode } from "./audio/toneBackendMode";
 import { BowingGestureInterpreter } from "./gesture/bowingGestureInterpreter";
 import { DemoHandSource } from "./gesture/demoHandSource";
 import { HandTracker } from "./gesture/handTracker";
@@ -18,7 +19,7 @@ export class GestureViolinApp {
   private readonly view: AppView;
   private readonly guidedView: GuidedView;
   private readonly scene: ViolinScene;
-  private readonly synth = new StringSynth();
+  private readonly synth: StringSynth;
   private readonly tracker = new HandTracker();
   private readonly primaryHandSelector = new PrimaryHandSelector();
   private readonly mouse = new MouseRehearsalSource();
@@ -44,6 +45,13 @@ export class GestureViolinApp {
     const demoEnabled = new URLSearchParams(window.location.search).get("demo") === "1";
     this.mode = demoEnabled ? "demo" : "camera";
     this.view = new AppView(root, demoEnabled);
+    this.synth = new StringSynth({
+      toneMode: readToneMode(window.location.search),
+      onSampleFailure: (error) => {
+        console.warn("Sampled violin unavailable; using synth fallback", error);
+        this.view.setError("真实提琴音色加载失败 · 已自动使用合成音色", false);
+      },
+    });
     this.guidedView = new GuidedView(root);
     this.scene = new ViolinScene(this.view.sceneCanvas);
     this.lastPerformance = mapPerformance(this.interpreter.reset(performance.now()));

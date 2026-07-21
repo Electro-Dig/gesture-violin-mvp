@@ -86,9 +86,10 @@ export class AppView {
     this.statusText.textContent = message;
   }
 
-  setError(message: string | null): void {
+  setError(message: string | null, retryable = true): void {
     this.errorBanner.hidden = !message;
     this.errorBanner.querySelector("span")!.textContent = message ?? "";
+    this.retryButton.hidden = !message || !retryable;
   }
 
   setAudioState(started: boolean, muted: boolean): void {
