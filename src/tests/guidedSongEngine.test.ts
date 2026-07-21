@@ -14,6 +14,20 @@ const SONG: SongDefinition = {
   difficulty: 1,
   durationLabel: "4 seconds",
   totalBeats: 4,
+  source: {
+    url: "https://example.test/fixture.mid",
+    license: "Public Domain",
+    sourceFile: "fixture.mid",
+    sourceTrack: 0,
+    sourceBeats: [0, 4],
+    sha256: "0000000000000000000000000000000000000000000000000000000000000000",
+  },
+  arrangement: {
+    kind: "tutorial-excerpt",
+    transposeSemitones: 0,
+    melodyStrategy: "monophonic-track",
+    transformations: ["Authored locally for deterministic unit tests."],
+  },
   pitchLanes: [60, 62, 64, 65],
   melody: [
     { midi: 60, startBeat: 0, durationBeats: 1, dynamic: 0.5, phrase: 0 },

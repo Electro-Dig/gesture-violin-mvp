@@ -35,6 +35,24 @@ export const CANON_IN_D: SongDefinition = {
   difficulty: 2,
   durationLabel: "约 67 秒",
   totalBeats: 80,
+  source: {
+    url: "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=1700",
+    license: "CC BY 3.0",
+    sourceFile: "Pachelbel-Canon-in-D-Mutopia-CC-BY-3.0.mid",
+    sourceTrack: 1,
+    sourceBeats: [0, 80],
+    sha256: "1358ba0799aeb727be0ef155fc9090ea55762a3b41f85d3dbb02918f4ac66515",
+  },
+  arrangement: {
+    kind: "tutorial-excerpt",
+    transposeSemitones: 0,
+    melodyStrategy: "monophonic-track",
+    transformations: [
+      "Selected the opening monophonic violin line.",
+      "Quantized boundaries to eighth beats and clipped the tutorial to 80 beats.",
+      "Retained the app's original tutorial accompaniment.",
+    ],
+  },
   pitchLanes: [62, 64, 66, 67, 69, 71, 73],
   melody: sequenceToMelody(
     variations.flatMap((variation, phrase) =>

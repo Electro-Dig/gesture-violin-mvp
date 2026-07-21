@@ -23,6 +23,22 @@ export type ScoreBreakdown = {
   expression: number;
 };
 
+export type SongSource = {
+  url: string;
+  license: "Public Domain" | "CC BY 3.0";
+  sourceFile: string;
+  sourceTrack: number;
+  sourceBeats: readonly [number, number];
+  sha256: string;
+};
+
+export type SongArrangement = {
+  kind: "tutorial-excerpt";
+  transposeSemitones: number;
+  melodyStrategy: "skyline" | "monophonic-track";
+  transformations: string[];
+};
+
 export type SongDefinition = {
   id: SongId;
   title: string;
@@ -32,6 +48,8 @@ export type SongDefinition = {
   difficulty: 1 | 2 | 3;
   durationLabel: string;
   totalBeats: number;
+  source: SongSource;
+  arrangement: SongArrangement;
   pitchLanes: number[];
   melody: SongNote[];
   accompaniment: AccompanimentEvent[];

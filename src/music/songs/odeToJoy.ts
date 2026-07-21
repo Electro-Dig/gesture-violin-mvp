@@ -50,6 +50,24 @@ export const ODE_TO_JOY: SongDefinition = {
   difficulty: 1,
   durationLabel: "约 38 秒",
   totalBeats: 48,
+  source: {
+    url: "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=528",
+    license: "Public Domain",
+    sourceFile: "Beethoven-Ode-to-Joy-Mutopia-PD.mid",
+    sourceTrack: 1,
+    sourceBeats: [0, 48],
+    sha256: "fb1604c08c865b275b464d74e5a7c526ff1a8acccdf9853cb92f0778daaed14b",
+  },
+  arrangement: {
+    kind: "tutorial-excerpt",
+    transposeSemitones: -7,
+    melodyStrategy: "skyline",
+    transformations: [
+      "Extracted the highest active voice from the upper-staff MIDI track.",
+      "Quantized boundaries to eighth beats and transposed down seven semitones.",
+      "Retained the app's original tutorial accompaniment.",
+    ],
+  },
   pitchLanes: [60, 62, 64, 65, 67],
   melody: sequenceToMelody([
     ...phrase("d", 0),

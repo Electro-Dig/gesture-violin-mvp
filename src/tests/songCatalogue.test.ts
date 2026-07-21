@@ -17,6 +17,35 @@ test("the catalogue contains two valid curated arrangements", () => {
   }
 });
 
+test("validation requires traceable score provenance", () => {
+  const invalid = {
+    ...ODE_TO_JOY,
+    source: {
+      url: "http://example.com/score.mid",
+      license: "",
+      sourceFile: "",
+      sourceTrack: -1,
+      sourceBeats: [4, 4],
+      sha256: "not-a-hash",
+    },
+    arrangement: {
+      kind: "tutorial-excerpt",
+      transposeSemitones: 0,
+      melodyStrategy: "skyline",
+      transformations: [],
+    },
+  } as unknown as SongDefinition;
+
+  const errors = validateSong(invalid);
+  assert.ok(errors.some((error) => error.includes("source.url")));
+  assert.ok(errors.some((error) => error.includes("source.license")));
+  assert.ok(errors.some((error) => error.includes("sourceFile")));
+  assert.ok(errors.some((error) => error.includes("sourceTrack")));
+  assert.ok(errors.some((error) => error.includes("sourceBeats")));
+  assert.ok(errors.some((error) => error.includes("sha256")));
+  assert.ok(errors.some((error) => error.includes("transformations")));
+});
+
 test("Ode to Joy uses five broad beginner lanes", () => {
   assert.deepEqual(ODE_TO_JOY.pitchLanes, [60, 62, 64, 65, 67]);
   assert.deepEqual(uniqueMidi(ODE_TO_JOY), [60, 62, 64, 65, 67]);
