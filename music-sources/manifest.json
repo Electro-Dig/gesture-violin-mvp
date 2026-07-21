@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "pieces": [
+    {
+      "songId": "ode-to-joy",
+      "input": "music-sources/mutopia/Beethoven-Ode-to-Joy-Mutopia-PD.mid",
+      "output": "src/music/generated/odeToJoyMelody.ts",
+      "sourceTrack": 1,
+      "sourceBeats": [0, 48],
+      "transposeSemitones": -7,
+      "melodyStrategy": "skyline",
+      "phraseBeats": 16,
+      "sha256": "fb1604c08c865b275b464d74e5a7c526ff1a8acccdf9853cb92f0778daaed14b"
+    },
+    {
+      "songId": "canon-in-d",
+      "input": "music-sources/mutopia/Pachelbel-Canon-in-D-Mutopia-CC-BY-3.0.mid",
+      "output": "src/music/generated/canonInDMelody.ts",
+      "sourceTrack": 1,
+      "sourceBeats": [0, 80],
+      "transposeSemitones": 0,
+      "melodyStrategy": "monophonic-track",
+      "phraseBeats": 16,
+      "sha256": "1358ba0799aeb727be0ef155fc9090ea55762a3b41f85d3dbb02918f4ac66515"
+    }
+  ]
+}
