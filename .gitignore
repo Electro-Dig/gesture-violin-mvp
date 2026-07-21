@@ -7,3 +7,4 @@ verification/
 !docs/verification/
 !docs/verification/**
 .superpowers/
+audio-sources/vsco2-ce/.cache/

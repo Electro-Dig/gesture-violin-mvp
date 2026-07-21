@@ -1,0 +1,16 @@
+{
+  "library": "VSCO 2 CE",
+  "version": "1.1.0",
+  "sourceBaseUrl": "https://raw.githubusercontent.com/sgossner/VSCO-2-CE/1.1.0/Strings/Solo%20Violin/Arco%20Vib",
+  "cacheDirectory": "audio-sources/vsco2-ce/.cache",
+  "outputDirectory": "public/audio/violin/vsco2-ce",
+  "roots": [
+    { "note": "C4", "midi": 60 },
+    { "note": "E4", "midi": 64 },
+    { "note": "G4", "midi": 67 },
+    { "note": "A4", "midi": 69 },
+    { "note": "C5", "midi": 72 },
+    { "note": "E5", "midi": 76 }
+  ],
+  "dynamics": ["p", "f"]
+}

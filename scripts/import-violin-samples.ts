@@ -1,0 +1,162 @@
+import { spawn } from "node:child_process";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import path from "node:path";
+
+import {
+  buildSourceEntries,
+  ffmpegArguments,
+  sha256File,
+  type ViolinSourceEntry,
+  type ViolinSourceManifest,
+} from "./lib/violinSampleImporter";
+
+type SourceLock = {
+  library: string;
+  version: string;
+  files: Array<{ id: string; sourceUrl: string; sha256: string; bytes: number }>;
+};
+
+type RuntimeSample = {
+  id: string;
+  rootMidi: number;
+  rootNote: string;
+  dynamic: "p" | "f";
+  url: string;
+  durationSeconds: number;
+  sourceSha256: string;
+  outputSha256: string;
+  bytes: number;
+};
+
+const root = process.cwd();
+const sourceDirectory = path.join(root, "audio-sources", "vsco2-ce");
+const manifestPath = path.join(sourceDirectory, "source-manifest.json");
+const lockPath = path.join(sourceDirectory, "source-lock.json");
+const generatedManifestPath = path.join(root, "src", "audio", "generated", "violinSampleManifest.ts");
+const updateLock = process.argv.includes("--update-lock");
+
+async function main(): Promise<void> {
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as ViolinSourceManifest;
+  const entries = buildSourceEntries(manifest);
+  const downloaded = await Promise.all(entries.map(downloadSource));
+  const nextLock: SourceLock = {
+    library: manifest.library,
+    version: manifest.version,
+    files: downloaded.map(({ entry, sha256, bytes }) => ({
+      id: entry.id,
+      sourceUrl: entry.sourceUrl,
+      sha256,
+      bytes,
+    })),
+  };
+
+  if (updateLock) {
+    await writeJson(lockPath, nextLock);
+  } else {
+    verifyLock(JSON.parse(await readFile(lockPath, "utf8")) as SourceLock, nextLock);
+  }
+
+  const runtimeSamples: RuntimeSample[] = [];
+  for (const item of downloaded) {
+    const sourcePath = absoluteProjectPath(item.entry.sourceFile);
+    const outputPath = absoluteProjectPath(item.entry.outputFile);
+    await mkdir(path.dirname(outputPath), { recursive: true });
+    await run("ffmpeg", ffmpegArguments(sourcePath, outputPath));
+    const outputStats = await stat(outputPath);
+    const durationSeconds = Number(
+      await run("ffprobe", [
+        "-v",
+        "error",
+        "-show_entries",
+        "format=duration",
+        "-of",
+        "default=noprint_wrappers=1:nokey=1",
+        outputPath,
+      ]),
+    );
+    if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) {
+      throw new Error(`Invalid duration for ${item.entry.id}: ${durationSeconds}`);
+    }
+    runtimeSamples.push({
+      id: item.entry.id,
+      rootMidi: item.entry.rootMidi,
+      rootNote: item.entry.rootNote,
+      dynamic: item.entry.dynamic,
+      url: `/${item.entry.outputFile.replace(/^public\//, "")}`,
+      durationSeconds,
+      sourceSha256: item.sha256,
+      outputSha256: await sha256File(outputPath),
+      bytes: outputStats.size,
+    });
+  }
+
+  const totalBytes = runtimeSamples.reduce((sum, sample) => sum + sample.bytes, 0);
+  if (runtimeSamples.length !== 12) throw new Error(`Expected 12 outputs, received ${runtimeSamples.length}`);
+  if (totalBytes > 1_500_000) throw new Error(`Violin sample budget exceeded: ${totalBytes} bytes`);
+
+  await mkdir(path.dirname(generatedManifestPath), { recursive: true });
+  await writeFile(generatedManifestPath, renderRuntimeManifest(runtimeSamples), "utf8");
+  console.log(`Imported ${runtimeSamples.length} violin samples (${totalBytes} bytes).`);
+}
+
+async function downloadSource(entry: ViolinSourceEntry): Promise<{
+  entry: ViolinSourceEntry;
+  sha256: string;
+  bytes: number;
+}> {
+  const filePath = absoluteProjectPath(entry.sourceFile);
+  await mkdir(path.dirname(filePath), { recursive: true });
+  try {
+    await stat(filePath);
+  } catch {
+    const response = await fetch(entry.sourceUrl);
+    if (!response.ok) throw new Error(`Download failed for ${entry.id}: HTTP ${response.status}`);
+    await writeFile(filePath, new Uint8Array(await response.arrayBuffer()));
+  }
+  const fileStats = await stat(filePath);
+  return { entry, sha256: await sha256File(filePath), bytes: fileStats.size };
+}
+
+function verifyLock(expected: SourceLock, actual: SourceLock): void {
+  if (expected.library !== actual.library || expected.version !== actual.version) {
+    throw new Error("VSCO source lock metadata does not match the manifest");
+  }
+  const expectedById = new Map(expected.files.map((file) => [file.id, file]));
+  for (const file of actual.files) {
+    const locked = expectedById.get(file.id);
+    if (!locked) throw new Error(`Missing source lock entry: ${file.id}`);
+    if (locked.sourceUrl !== file.sourceUrl || locked.sha256 !== file.sha256 || locked.bytes !== file.bytes) {
+      throw new Error(`Source lock mismatch: ${file.id}`);
+    }
+  }
+  if (expectedById.size !== actual.files.length) throw new Error("Source lock contains unexpected entries");
+}
+
+function renderRuntimeManifest(samples: RuntimeSample[]): string {
+  return `// Generated by pnpm audio:import. Do not edit by hand.\n\nexport type ViolinSampleAsset = {\n  id: string;\n  rootMidi: number;\n  rootNote: string;\n  dynamic: \"p\" | \"f\";\n  url: string;\n  durationSeconds: number;\n  sourceSha256: string;\n  outputSha256: string;\n  bytes: number;\n};\n\nexport const VIOLIN_SAMPLE_MANIFEST = ${JSON.stringify(samples, null, 2)} as const satisfies readonly ViolinSampleAsset[];\n`;
+}
+
+async function writeJson(filePath: string, value: unknown): Promise<void> {
+  await writeFile(filePath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+}
+
+async function run(command: string, args: string[]): Promise<string> {
+  return await new Promise((resolve, reject) => {
+    const child = spawn(command, args, { cwd: root, windowsHide: true });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk: Buffer) => (stdout += chunk.toString()));
+    child.stderr.on("data", (chunk: Buffer) => (stderr += chunk.toString()));
+    child.on("error", reject);
+    child.on("close", (code) => {
+      if (code === 0) resolve(stdout.trim());
+      else reject(new Error(`${command} exited with ${code}: ${stderr.trim()}`));
+    });
+  });
+}
+
+function absoluteProjectPath(projectPath: string): string {
+  return path.resolve(root, ...projectPath.split("/"));
+}
+
+await main();
