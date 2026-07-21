@@ -24,12 +24,12 @@
 - TypeScript + Vite
 - Three.js 程序化原创小提琴、琴弓、琴弦和粒子
 - MediaPipe Tasks Vision，本地托管 WASM 与手势模型
-- Web Audio API 实时合成，不使用第三方录音采样
+- Web Audio API 默认播放 VSCO 2 CE CC0 真实小提琴采样；加载期间或失败时即时使用内置合成音色回退
 - `requestVideoFrameCallback` 驱动逐视频帧推理；同一媒体时间最多推理一次，不使用固定 28 Hz 轮询
 - 手势模型优先使用 GPU delegate，创建失败时自动回退 CPU；界面诊断会显示实际 delegate、跟踪频率和推理耗时
-- Node test runner + tsx 覆盖手势稳定、换弓响应、谱面导入和节奏轨模型
+- Node test runner + tsx 覆盖手势稳定、换弓响应、谱面导入、采样资产和节奏轨模型
 
-没有使用 Viola the Bird 的代码、模型、纹理或录音。本项目只借鉴“移动琴弓来演奏”的一般交互范式，三维几何与声音均由本项目程序化生成。
+没有使用 Viola the Bird 的代码、模型、纹理或录音。本项目只借鉴“移动琴弓来演奏”的一般交互范式；三维几何为项目原创，主提琴音色来自独立开源采样库。
 
 ## 曲谱来源与再生成
 
@@ -48,6 +48,22 @@ git diff -- src/music/generated
 pnpm test
 ```
 
+## 提琴音色来源与再生成
+
+默认主音色使用 [VS Chamber Orchestra 2 Community Edition](https://github.com/sgossner/VSCO-2-CE) 的 `Solo Violin / Arco Vib`，该库以 CC0 1.0 Universal 发布。项目固定到 1.1.0 标签，选取 C4、E4、G4、A4、C5、E5 六个根音的 p/f 两层，共 12 个文件；当前八音音域最多只需要移调 2 个半音。
+
+压缩后的运行时采样共 1,450,008 字节。首次启用声音时，旧合成音色会立即响应；12 个采样全部解码成功后在 120 ms 内切换到真实采样。任一文件加载失败则继续使用合成音色，不会让演奏静音。
+
+源 URL、CC0 原文、SHA-256 锁与转换说明位于 [`audio-sources/vsco2-ce`](audio-sources/vsco2-ce)。重新验证和生成：
+
+```bash
+pnpm audio:import
+git diff -- audio-sources/vsco2-ce/source-lock.json src/audio/generated/violinSampleManifest.ts public/audio/violin/vsco2-ce
+pnpm test
+```
+
+默认地址和 `?tone=sample` 使用采样优先模式；追加 `?tone=synth` 可强制旧合成音色，用于同一版本的 A/B 听感比较。
+
 ## 浏览器与权限
 
 - 推荐桌面版近期 Chrome 或 Edge；摄像头需要用户授权。
@@ -61,6 +77,7 @@ pnpm test
 ```bash
 pnpm install
 pnpm music:import
+pnpm audio:import
 pnpm test
 pnpm build
 pnpm dev
@@ -88,6 +105,6 @@ npx netlify-cli deploy --prod --dir dist --site 29931500-0653-4cc2-af3a-1370ebe2
 
 ## 已知边界
 
-- 当前是程序化合成的“弦乐感”音色，不是采样级真实小提琴；两首引导曲是教学节选，不是完整乐章。
+- 当前真实采样只包含 Arco Vib 长弓和 p/f 两个力度层，尚无拨弦、跳弓或无颤音奏法；两首引导曲仍是教学节选，不是完整乐章。
 - 当前仍按单手跟踪配置运行；双手职责已经定义，但尚未实现第二只手的身份稳定与遮挡处理。
 - ToF、WebHID 或 Web Serial 尚未接入，但输入层已统一为标准化手帧，可在不改动音乐、三维和音频层的前提下新增适配器。
