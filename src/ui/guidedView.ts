@@ -25,11 +25,13 @@ export class GuidedView {
   private readonly progressLabel: HTMLElement;
   private readonly score: HTMLElement;
   private readonly orbitCues: SVGElement;
+  private readonly orbitHitZone: SVGGElement;
   private readonly measureLabel: HTMLElement;
   private readonly phraseLabel: HTMLElement;
   private readonly measureTicks: HTMLElement;
   private readonly cueNodes = new Map<string, OrbitCueNode>();
   private lastMeasureKey = "";
+  private lastJudgmentPulseKey: string | null = null;
   private measureTickCount = 0;
   private readonly directionSymbol: HTMLElement;
   private readonly directionMessage: HTMLElement;
@@ -56,6 +58,7 @@ export class GuidedView {
     this.progressLabel = requireElement(root, "#guided-progress-label", HTMLElement);
     this.score = requireElement(root, "#guided-score", HTMLElement);
     this.orbitCues = requireElement(root, "#orbit-cues", SVGElement);
+    this.orbitHitZone = requireElement(root, "#orbit-hit-zone", SVGGElement);
     this.measureLabel = requireElement(root, "#measure-label", HTMLElement);
     this.phraseLabel = requireElement(root, "#phrase-label", HTMLElement);
     this.measureTicks = requireElement(root, "#measure-ticks", HTMLElement);
@@ -103,6 +106,7 @@ export class GuidedView {
     this.songSelect.hidden = true;
     this.result.hidden = true;
     this.hud.hidden = false;
+    this.lastJudgmentPulseKey = null;
     this.songTitle.textContent = song.title;
     this.songComposer.textContent = song.composer;
   }
@@ -122,6 +126,26 @@ export class GuidedView {
     this.timingFeedback.dataset.tone = display.timingTone;
     this.timingFeedback.dataset.note = String(frame.lastJudgmentNoteIndex);
     this.timingFeedback.textContent = display.timingLabel;
+    this.orbitHitZone.dataset.tone = display.timingTone;
+    if (
+      display.judgmentPulseKey
+      && display.judgmentPulseKey !== this.lastJudgmentPulseKey
+      && !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      && typeof this.orbitHitZone.animate === "function"
+    ) {
+      this.orbitHitZone.animate(
+        [
+          { opacity: 0.55, transform: "scale(0.96)" },
+          { opacity: 1, transform: "scale(1.08)", offset: 0.38 },
+          { opacity: 0.72, transform: "scale(1)" },
+        ],
+        {
+          duration: 520,
+          easing: "cubic-bezier(.22,.8,.28,1)",
+        },
+      );
+    }
+    this.lastJudgmentPulseKey = display.judgmentPulseKey;
     this.countIn.hidden = frame.phase !== "countIn";
     this.countNumber.textContent = String(frame.countdown);
   }

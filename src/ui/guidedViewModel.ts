@@ -25,6 +25,7 @@ export type GuidedDisplay = {
   directionSymbol: "←" | "→";
   timingLabel: string;
   timingTone: TimingTone;
+  judgmentPulseKey: string | null;
   helperMessage: string;
 };
 
@@ -52,6 +53,9 @@ export function buildGuidedDisplay(
     directionSymbol: frame.expectedDirection > 0 ? "→" : "←",
     timingLabel: timing.label,
     timingTone: timing.tone,
+    judgmentPulseKey: frame.lastJudgmentNoteIndex >= 0 && frame.lastJudgment !== "none"
+      ? `${frame.lastJudgmentNoteIndex}:${frame.lastJudgment}`
+      : null,
     helperMessage: frame.phase === "complete"
       ? "演奏完成"
       : "音符抵达左下命中点时，改变拉弓方向",

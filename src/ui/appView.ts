@@ -217,14 +217,14 @@ function template(demoEnabled: boolean): string {
             <svg id="rhythm-orbit" class="rhythm-orbit" viewBox="0 0 100 100" role="img">
               <defs>
                 <linearGradient id="orbit-current-gradient" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0" stop-color="#ff5a35"></stop>
-                  <stop offset="1" stop-color="#ffba70"></stop>
+                  <stop offset="0" stop-color="#c58b5b"></stop>
+                  <stop offset="1" stop-color="#ead7ba"></stop>
                 </linearGradient>
               </defs>
               <circle class="orbit-rail orbit-rail-outer" cx="50" cy="50" r="42"></circle>
               <circle class="orbit-rail orbit-rail-inner" cx="50" cy="50" r="36"></circle>
               <g id="orbit-cues"></g>
-              <g class="orbit-hit-zone" aria-label="换弓命中区">
+              <g id="orbit-hit-zone" class="orbit-hit-zone" aria-label="换弓命中区">
                 <path d="M 9 80 L 15.2 73.5 L 22 68"></path>
                 <circle cx="15.2" cy="73.5" r="2.4"></circle>
                 <text x="5.5" y="87">HIT / 换弓</text>

@@ -72,3 +72,14 @@ test("count-in explains the simplified bow-only interaction", () => {
   assert.equal(display.timingLabel, "准备");
   assert.equal(display.helperMessage, "音符抵达左下命中点时，改变拉弓方向");
 });
+
+test("creates one pulse key for each judged score note", () => {
+  const song = getSong("ode-to-joy");
+  const engine = new GuidedSongEngine(song);
+  engine.start(0);
+  engine.update(bow({ bowing: false, direction: 0 }), 3000);
+  const judged = engine.update(bow({ direction: 1 }), 3050);
+  const display = buildGuidedDisplay(song, judged);
+
+  assert.equal(display.judgmentPulseKey, `${judged.lastJudgmentNoteIndex}:${judged.lastJudgment}`);
+});
