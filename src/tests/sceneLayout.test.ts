@@ -26,3 +26,12 @@ test("bow direction tilts the animated bow and idle mode recedes", () => {
   assert.ok(right.rotationZ > 0);
   assert.ok(idle.opacity < left.opacity);
 });
+
+test("keeps the violin body stable while bow expression moves", () => {
+  const soft = mapBowPose({ bowX: 0.3, pitch: 0.5, intensity: 0.2, direction: 1, phase: "bowing" });
+  const strong = mapBowPose({ bowX: 0.8, pitch: 0.5, intensity: 1, direction: -1, phase: "bowing" });
+
+  assert.equal(soft.instrumentScale, 1);
+  assert.equal(strong.instrumentScale, 1);
+  assert.notEqual(soft.x, strong.x);
+});

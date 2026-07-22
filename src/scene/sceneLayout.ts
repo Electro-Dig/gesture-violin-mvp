@@ -14,6 +14,7 @@ export type BowPose = {
   rotationZ: number;
   opacity: number;
   glow: number;
+  instrumentScale: number;
   stringIndex: number;
 };
 
@@ -28,6 +29,7 @@ export function mapBowPose(input: BowPoseInput): BowPose {
     rotationZ: input.direction * (0.025 + intensity * 0.055),
     opacity: input.phase === "idle" ? 0.38 : input.phase === "ready" ? 0.72 : 1,
     glow: input.phase === "bowing" ? 0.2 + intensity * 2.8 : 0.05,
+    instrumentScale: 1,
     stringIndex: Math.min(3, Math.floor(pitch * 4)),
   };
 }

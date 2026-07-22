@@ -8,10 +8,10 @@ import {
   type StagePlacement,
 } from "./stagePlacement";
 
-const IVORY = new THREE.Color("#f3e8d2");
-const AMBER = new THREE.Color("#f19a38");
-const VERMILION = new THREE.Color("#ff4d2e");
-const ALIGNED = new THREE.Color("#9fd18f");
+const IVORY = new THREE.Color("#eadbc5");
+const AMBER = new THREE.Color("#c99361");
+const VERMILION = new THREE.Color("#9a4b35");
+const ALIGNED = new THREE.Color("#a9c7a0");
 
 export class ViolinScene {
   private readonly renderer: THREE.WebGLRenderer;
@@ -39,16 +39,16 @@ export class ViolinScene {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.05;
+    this.renderer.toneMappingExposure = 0.94;
 
     this.camera.position.set(0, 0.25, 8.1);
     this.camera.lookAt(0, 0.25, 0);
 
-    this.scene.add(new THREE.AmbientLight("#7a4c35", 1.5));
-    const key = new THREE.SpotLight("#ffd5a2", 70, 15, Math.PI / 5, 0.65, 1.2);
+    this.scene.add(new THREE.AmbientLight("#5b4034", 1.35));
+    const key = new THREE.SpotLight("#f2d2aa", 58, 15, Math.PI / 5, 0.7, 1.2);
     key.position.set(-3.5, 5.5, 6);
     this.scene.add(key);
-    const rim = new THREE.PointLight("#ff3f21", 25, 12, 1.5);
+    const rim = new THREE.PointLight("#a24e39", 15, 12, 1.5);
     rim.position.set(3.5, 1.5, 2);
     this.scene.add(rim);
 
@@ -124,7 +124,7 @@ export class ViolinScene {
       material.opacity = THREE.MathUtils.damp(material.opacity, pose.opacity, 10, delta);
       material.emissiveIntensity = THREE.MathUtils.damp(
         material.emissiveIntensity,
-        pose.glow * 0.24,
+        pose.glow * 0.14,
         10,
         delta,
       );
@@ -139,7 +139,7 @@ export class ViolinScene {
       material.emissive.lerp(selected ? guidedColor : new THREE.Color("#000000"), 0.16);
       material.emissiveIntensity = THREE.MathUtils.damp(
         material.emissiveIntensity,
-        selected ? pose.glow : 0,
+        selected ? Math.min(pose.glow, 1.35) : 0,
         12,
         delta,
       );
@@ -158,26 +158,25 @@ export class ViolinScene {
     );
     this.particles.position.set(this.bow.position.x * 0.14 + 0.22, this.bow.position.y, 0.75);
     this.particles.rotation.z = timeMs * 0.00035;
-    const pulse = input.phase === "bowing" ? 1 + Math.sin(timeMs * 0.018) * 0.035 : 1;
-    this.instrument.scale.setScalar(pulse);
+    this.instrument.scale.setScalar(pose.instrumentScale);
 
     this.renderer.render(this.scene, this.camera);
   };
 
   private buildInstrument(): void {
     const wood = new THREE.MeshPhysicalMaterial({
-      color: "#b9551e",
-      roughness: 0.32,
+      color: "#713623",
+      roughness: 0.4,
       metalness: 0.02,
-      clearcoat: 0.72,
-      clearcoatRoughness: 0.22,
+      clearcoat: 0.58,
+      clearcoatRoughness: 0.3,
     });
     const darkWood = new THREE.MeshStandardMaterial({
-      color: "#24130e",
+      color: "#1b1210",
       roughness: 0.48,
     });
     const maple = new THREE.MeshStandardMaterial({
-      color: "#ce7934",
+      color: "#9b5e3d",
       roughness: 0.4,
     });
 
@@ -196,7 +195,7 @@ export class ViolinScene {
 
     const bodyEdge = new THREE.LineSegments(
       new THREE.EdgesGeometry(bodyGeometry, 28),
-      new THREE.LineBasicMaterial({ color: "#5b2412", transparent: true, opacity: 0.42 }),
+      new THREE.LineBasicMaterial({ color: "#3f2119", transparent: true, opacity: 0.34 }),
     );
     this.instrument.add(bodyEdge);
 
@@ -260,16 +259,16 @@ export class ViolinScene {
 
   private buildBow(): void {
     const stickMaterial = new THREE.MeshStandardMaterial({
-      color: "#d8482c",
-      emissive: "#63150f",
+      color: "#7d3f2e",
+      emissive: "#402019",
       emissiveIntensity: 0,
       roughness: 0.34,
       transparent: true,
       opacity: 0.38,
     });
     const hairMaterial = new THREE.MeshStandardMaterial({
-      color: "#f4dec1",
-      emissive: "#ff704a",
+      color: "#eadcc8",
+      emissive: "#8f6245",
       emissiveIntensity: 0,
       roughness: 0.25,
       transparent: true,
@@ -305,7 +304,7 @@ export class ViolinScene {
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
     const material = new THREE.PointsMaterial({
-      color: "#ffb36b",
+      color: "#d0a06f",
       size: 0.035,
       transparent: true,
       opacity: 0,
@@ -318,7 +317,7 @@ export class ViolinScene {
   private addStageHalo(): void {
     const halo = new THREE.Mesh(
       new THREE.RingGeometry(2.8, 2.82, 96),
-      new THREE.MeshBasicMaterial({ color: "#7f2d1d", transparent: true, opacity: 0.34 }),
+      new THREE.MeshBasicMaterial({ color: "#6e3e31", transparent: true, opacity: 0.22 }),
     );
     halo.position.set(0.2, 0.15, -0.6);
     this.rig.add(halo);
@@ -330,7 +329,7 @@ export class ViolinScene {
     this.scene.add(
       new THREE.Line(
         lineGeometry,
-        new THREE.LineBasicMaterial({ color: "#9b5035", transparent: true, opacity: 0.35 }),
+        new THREE.LineBasicMaterial({ color: "#8b6650", transparent: true, opacity: 0.22 }),
       ),
     );
   }
