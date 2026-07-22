@@ -4,6 +4,7 @@ import {
   BOW_CROSSFADE_SECONDS,
   CONTINUATION_CROSSFADE_SECONDS,
   RELEASE_SECONDS,
+  SAMPLE_TONE,
   layerGains,
   needsFreshBow,
   playbackRate,
@@ -39,13 +40,23 @@ export class SampledViolinVoice {
   ) {
     const sourceBus = context.createGain();
     const dry = context.createGain();
-    dry.gain.value = 0.86;
+    dry.gain.value = SAMPLE_TONE.dryGain;
     const convolver = context.createConvolver();
-    convolver.buffer = createRoomImpulseBuffer(context);
+    convolver.buffer = createRoomImpulseBuffer(context, SAMPLE_TONE.roomSeconds);
     const wet = context.createGain();
-    wet.gain.value = 0.14;
-    sourceBus.connect(dry).connect(destination);
-    sourceBus.connect(convolver).connect(wet).connect(destination);
+    wet.gain.value = SAMPLE_TONE.wetGain;
+    const presence = context.createBiquadFilter();
+    presence.type = "peaking";
+    presence.frequency.value = SAMPLE_TONE.presenceHz;
+    presence.Q.value = SAMPLE_TONE.presenceQ;
+    presence.gain.value = SAMPLE_TONE.presenceGainDb;
+    const silk = context.createBiquadFilter();
+    silk.type = "lowpass";
+    silk.frequency.value = SAMPLE_TONE.lowpassHz;
+    silk.Q.value = SAMPLE_TONE.lowpassQ;
+    sourceBus.connect(presence).connect(silk);
+    silk.connect(dry).connect(destination);
+    silk.connect(convolver).connect(wet).connect(destination);
 
     const noiseSource = context.createBufferSource();
     noiseSource.buffer = createBowNoiseBuffer(context, 2);
@@ -70,7 +81,7 @@ export class SampledViolinVoice {
     const sounding = state.voiceActive && state.phase === "bowing";
     const expressive = mapStringVoice(state);
     this.noiseGain.gain.setTargetAtTime(
-      sounding ? expressive.noiseGain * 0.2 : 0,
+      sounding ? expressive.noiseGain * SAMPLE_TONE.bowNoiseScale : 0,
       now,
       sounding ? 0.025 : RELEASE_SECONDS,
     );

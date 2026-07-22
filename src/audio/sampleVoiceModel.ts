@@ -1,9 +1,21 @@
 import type { PerformanceState } from "../music/performanceModel";
 
-export const BOW_CROSSFADE_SECONDS = 0.035;
+export const BOW_CROSSFADE_SECONDS = 0.05;
 export const CONTINUATION_CROSSFADE_SECONDS = 0.09;
-export const RELEASE_SECONDS = 0.11;
+export const RELEASE_SECONDS = 0.14;
 export const CONTINUATION_THRESHOLD_SECONDS = 0.18;
+
+export const SAMPLE_TONE = Object.freeze({
+  dryGain: 0.84,
+  wetGain: 0.16,
+  roomSeconds: 0.5,
+  bowNoiseScale: 0.08,
+  presenceHz: 2_650,
+  presenceQ: 0.72,
+  presenceGainDb: -2.4,
+  lowpassHz: 6_600,
+  lowpassQ: 0.38,
+});
 
 export type SampleVoiceFrame = Pick<
   PerformanceState,

@@ -3,7 +3,10 @@ import test from "node:test";
 
 import type { PerformanceState } from "../music/performanceModel";
 import {
+  BOW_CROSSFADE_SECONDS,
   CONTINUATION_CROSSFADE_SECONDS,
+  RELEASE_SECONDS,
+  SAMPLE_TONE,
   layerGains,
   needsFreshBow,
   playbackRate,
@@ -101,4 +104,13 @@ test("keeps direction articulation in free performance", () => {
     needsFreshBow(frame({ direction: 1 }), frame({ direction: -1 })),
     true,
   );
+});
+
+test("uses a restrained warm sample treatment", () => {
+  assert.equal(SAMPLE_TONE.dryGain + SAMPLE_TONE.wetGain, 1);
+  assert.ok(SAMPLE_TONE.bowNoiseScale <= 0.1);
+  assert.ok(SAMPLE_TONE.presenceGainDb >= -3 && SAMPLE_TONE.presenceGainDb <= -1.5);
+  assert.ok(SAMPLE_TONE.lowpassHz >= 6_000 && SAMPLE_TONE.lowpassHz <= 7_200);
+  assert.ok(BOW_CROSSFADE_SECONDS >= 0.045 && BOW_CROSSFADE_SECONDS <= 0.06);
+  assert.ok(RELEASE_SECONDS >= 0.13 && RELEASE_SECONDS <= 0.16);
 });
