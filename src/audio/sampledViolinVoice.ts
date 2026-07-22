@@ -215,6 +215,7 @@ function toSampleFrame(state: PerformanceState): SampleVoiceFrame {
     midi: state.midi,
     intensity: state.intensity,
     direction: state.direction,
+    articulationId: state.articulationId,
   };
 }
 

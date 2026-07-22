@@ -26,6 +26,7 @@ export function mapGuidedPerformance(
     horizontalSpeed: Math.max(0, bowing.horizontalSpeed),
     direction: bowing.direction,
     confidence: clamp01(bowing.confidence),
+    articulationId: guided.currentNoteIndex,
   };
 }
 

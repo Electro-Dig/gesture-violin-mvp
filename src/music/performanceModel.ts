@@ -19,6 +19,7 @@ export type PerformanceState = {
   horizontalSpeed: number;
   direction: -1 | 0 | 1;
   confidence: number;
+  articulationId?: number;
 };
 
 export function mapPerformance(frame: BowingFrame): PerformanceState {

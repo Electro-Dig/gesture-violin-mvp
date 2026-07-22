@@ -87,3 +87,14 @@ test("lost tracking releases a guided melody immediately", () => {
   assert.equal(state.intensity, 0);
   assert.equal(state.phase, "idle");
 });
+
+test("guided performance identifies the real score-note articulation", () => {
+  const first = mapGuidedPerformance(bow({ direction: 1 }), guided({ currentNoteIndex: 4 }));
+  const sameNoteEarlyReverse = mapGuidedPerformance(
+    bow({ direction: -1 }),
+    guided({ currentNoteIndex: 4 }),
+  );
+
+  assert.equal(first.articulationId, 4);
+  assert.equal(sameNoteEarlyReverse.articulationId, 4);
+});

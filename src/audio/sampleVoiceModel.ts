@@ -7,7 +7,7 @@ export const CONTINUATION_THRESHOLD_SECONDS = 0.18;
 
 export type SampleVoiceFrame = Pick<
   PerformanceState,
-  "voiceActive" | "phase" | "midi" | "intensity" | "direction"
+  "voiceActive" | "phase" | "midi" | "intensity" | "direction" | "articulationId"
 >;
 
 export type SampleRoot = {
@@ -59,7 +59,12 @@ export function needsFreshBow(
   if (!previous || !isSounding(previous)) return true;
   if (previous.midi !== next.midi) return true;
   if (selectSampleRoot(previous.midi).rootMidi !== selectSampleRoot(next.midi).rootMidi) return true;
-  return previous.direction !== 0 && next.direction !== 0 && previous.direction !== next.direction;
+  if (previous.articulationId !== undefined && next.articulationId !== undefined) {
+    return previous.articulationId !== next.articulationId;
+  }
+  return previous.direction !== 0
+    && next.direction !== 0
+    && previous.direction !== next.direction;
 }
 
 export function shouldContinue(active: boolean, remainingSeconds: number): boolean {

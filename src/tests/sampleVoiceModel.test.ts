@@ -83,3 +83,22 @@ test("sample frames stay structurally compatible with performance state", () => 
   };
   assert.equal(Object.keys(sampleFrame).length, 5);
 });
+
+test("does not restart the previous guided note for an early reversal", () => {
+  const previous = frame({ direction: 1, articulationId: 7 });
+  const earlyReverse = frame({ direction: -1, articulationId: 7 });
+  assert.equal(needsFreshBow(previous, earlyReverse), false);
+});
+
+test("restarts at a new guided note even when the pitch repeats", () => {
+  const previous = frame({ midi: 64, articulationId: 7 });
+  const repeatedPitch = frame({ midi: 64, articulationId: 8 });
+  assert.equal(needsFreshBow(previous, repeatedPitch), true);
+});
+
+test("keeps direction articulation in free performance", () => {
+  assert.equal(
+    needsFreshBow(frame({ direction: 1 }), frame({ direction: -1 })),
+    true,
+  );
+});
